@@ -304,7 +304,7 @@
       "gridPos": { "h": 4, "w": 24, "x": 0, "y": 36 },
       "options": {
         "mode": "markdown",
-        "content": "### Trace Drill-Down\n\nDashboard panels show aggregated metrics from traces. To inspect individual traces with full governance attributes:\n\n- **[All Traces](explore?schemaVersion=1&panes=%7B%22a%22:%7B%22datasource%22:%22grafanacloud-cartagenaarnold-traces%22,%22queries%22:%5B%7B%22refId%22:%22A%22,%22queryType%22:%22traceql%22,%22query%22:%22%7BrootServiceName%3D%5C%22edictum-demo%5C%22%7D%22%7D%5D%7D%7D)** — all governance spans\n- **[Queryless Explorer](explore/traces?mode=queryless)** — visual trace explorer with attribute filtering"
+        "content": "### Trace Drill-Down\n\nDashboard panels show aggregated metrics from traces. To inspect individual traces with full governance attributes:\n\n- **[All Traces](explore?schemaVersion=1&panes=%7B%22a%22:%7B%22datasource%22:%22grafanacloud-traces%22,%22queries%22:%5B%7B%22refId%22:%22A%22,%22queryType%22:%22traceql%22,%22query%22:%22%7BrootServiceName%3D%5C%22edictum-demo%5C%22%7D%22%7D%5D%7D%7D)** — all governance spans\n- **[Queryless Explorer](explore/traces?mode=queryless)** — visual trace explorer with attribute filtering"
       }
     }
   ],
@@ -314,13 +314,13 @@
         "name": "DS_PROMETHEUS",
         "type": "datasource",
         "query": "prometheus",
-        "current": { "selected": true, "text": "grafanacloud-cartagenaarnold-prom", "value": "grafanacloud-cartagenaarnold-prom" }
+        "current": { "selected": true, "text": "grafanacloud-prom", "value": "grafanacloud-prom" }
       },
       {
         "name": "DS_TEMPO",
         "type": "datasource",
         "query": "tempo",
-        "current": { "selected": true, "text": "grafanacloud-cartagenaarnold-traces", "value": "grafanacloud-cartagenaarnold-traces" }
+        "current": { "selected": true, "text": "grafanacloud-traces", "value": "grafanacloud-traces" }
       }
     ]
   }

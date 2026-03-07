@@ -3,185 +3,215 @@ Edictum CrewAI Adapter Demo
 ============================
 
 Demonstrates Edictum governance using the CrewAI adapter with global
-before/after tool-call hooks. A CrewAI agent uses GPT-4.1 for
-pharmacovigilance tasks while Edictum governs every tool call via hooks.
+before/after tool-call hooks. Exercises ALL contract types: pre/post/
+session/sandbox, deny/redact/warn/approve, principal/RBAC, observe mode,
+tool classification, and console integration.
 
 Usage:
     python adapters/demo_crewai.py
     python adapters/demo_crewai.py --mode observe
-    python adapters/demo_crewai.py --role researcher
-    python adapters/demo_crewai.py --role researcher --ticket CAPA-2025-042
+    python adapters/demo_crewai.py --console
+    python adapters/demo_crewai.py --quick --role admin
 """
 
 from __future__ import annotations
 
+import asyncio
+import sys
+from pathlib import Path
+
 from edictum import Edictum
 from edictum.adapters.crewai import CrewAIAdapter
+from edictum.approval import LocalApprovalBackend
 from crewai import Agent, Task, Crew
 from crewai.tools import tool as crewai_tool
 
-import sys
-from pathlib import Path
 sys.path.insert(0, str(Path(__file__).parent))
 
-from shared import (  # noqa: E402
-    query_clinical_data as shared_query_clinical_data,
-    update_case_report as shared_update_case_report,
-    export_regulatory_document as shared_export_regulatory_document,
-    search_medical_literature as shared_search_medical_literature,
-    redact_pii,
-    CollectingAuditSink,
+from shared_v2 import (  # noqa: E402
+    get_weather as _get_weather,
+    search_web as _search_web,
+    read_file as _read_file,
+    send_email as _send_email,
+    update_record as _update_record,
+    delete_record as _delete_record,
     CONTRACTS_PATH,
-    SYSTEM_PROMPT,
-    DEFAULT_TASK,
+    SCENARIOS,
+    QUICK_SCENARIOS,
+    create_console_guard,
+    classify_result,
+    mark_sink,
+    get_local_sink,
     parse_args,
     make_principal,
     print_banner,
-    print_header,
-    print_event,
-    print_governance,
+    print_scenario,
+    print_result,
     print_audit_summary,
-    print_token_summary,
-    setup_otel,
-    teardown_otel,
 )
 
 
-# --- CrewAI tool wrappers ---------------------------------------------------
+# ─── CrewAI tool wrappers ──────────────────────────────────────────────────
+# CrewAI normalizes tool names: the @crewai_tool decorator name becomes the
+# tool's display name, but the function name is what matters for contracts.
+# Using snake_case function names ensures they match contract tool names
+# after CrewAIAdapter._normalize_tool_name() processing.
 
-@crewai_tool("Query Clinical Data")
-def query_clinical_data(dataset: str, query: str = "") -> str:
-    """Query clinical trial databases. Available datasets: trial_summary, adverse_events_summary, adverse_events_detailed, patient_records, lab_results."""
-    return shared_query_clinical_data(dataset, query)
-
-
-@crewai_tool("Update Case Report")
-def update_case_report(event_id: str, section: str, content: str) -> str:
-    """Update a section of an adverse event case report."""
-    return shared_update_case_report(event_id, section, content)
+@crewai_tool
+def get_weather(city: str) -> str:
+    """Get current weather for a city."""
+    return _get_weather(city)
 
 
-@crewai_tool("Export Regulatory Document")
-def export_regulatory_document(document_type: str, trial_id: str, content: str) -> str:
-    """Export a document for regulatory submission (e.g., safety narrative for IND/NDA)."""
-    return shared_export_regulatory_document(document_type, trial_id, content)
+@crewai_tool
+def search_web(query: str) -> str:
+    """Search the web for information."""
+    return _search_web(query)
 
 
-@crewai_tool("Search Medical Literature")
-def search_medical_literature(terms: str, max_results: int = 5) -> str:
-    """Search medical literature for relevant publications."""
-    return shared_search_medical_literature(terms, max_results)
+@crewai_tool
+def read_file(path: str) -> str:
+    """Read a file from the filesystem."""
+    return _read_file(path)
 
 
-# --- Main --------------------------------------------------------------------
+@crewai_tool
+def send_email(to: str, subject: str, body: str) -> str:
+    """Send an email to a recipient."""
+    return _send_email(to, subject, body)
 
-def main():
+
+@crewai_tool
+def update_record(record_id: str, data: str, confirmed: bool = False) -> str:
+    """Update a record in the database."""
+    return _update_record(record_id, data, confirmed)
+
+
+@crewai_tool
+def delete_record(record_id: str) -> str:
+    """Delete a record from the database."""
+    return _delete_record(record_id)
+
+
+ALL_TOOLS = [get_weather, search_web, read_file, send_email, update_record, delete_record]
+
+TOOL_MAP = {
+    "get_weather": get_weather,
+    "search_web": search_web,
+    "read_file": read_file,
+    "send_email": send_email,
+    "update_record": update_record,
+    "delete_record": delete_record,
+}
+
+
+# ─── Main ───────────────────────────────────────────────────────────────────
+
+async def main():
     args = parse_args("CrewAI")
-    principal = make_principal(args.role, args.ticket)
-    task = args.task or DEFAULT_TASK
-    setup_otel()
+    principal = make_principal(args.role)
+    scenarios = QUICK_SCENARIOS if args.quick else SCENARIOS
 
-    # Audit sink
-    sink = CollectingAuditSink()
+    # ── Create governance guard ──────────────────────────────────────────
+    if args.console:
+        guard = await create_console_guard(agent_id="edictum-crewai-agent")
+    else:
+        guard = Edictum.from_yaml(
+            str(CONTRACTS_PATH),
+            mode="observe" if args.mode == "observe" else None,
+        )
+    sink = get_local_sink(guard)
 
-    # Governance guard
-    guard = Edictum.from_yaml(
-        str(CONTRACTS_PATH),
-        mode="observe" if args.mode == "observe" else None,
-        audit_sink=sink,
-    )
-
-    # CrewAI adapter with postcondition-aware PII warning callback
+    # ── CrewAI adapter ───────────────────────────────────────────────────
     adapter = CrewAIAdapter(guard, principal=principal)
 
     pii_warnings: list[dict] = []
 
-    def warn_callback(result, findings):
+    def on_postcondition_warn(result, findings):
         pii_warnings.append({"findings": [f.message for f in findings]})
-        if isinstance(result, str):
-            redacted = redact_pii(result)
-            print_governance("WARNING", "PII detected in tool output")
-            return redacted
-        return result
 
-    # register() handles tool name normalization, async bridging, and
-    # hook registration internally (all fixed in edictum 0.5.2).
-    adapter.register(on_postcondition_warn=warn_callback)
+    adapter.register(on_postcondition_warn=on_postcondition_warn)
 
-    # CrewAI agent
-    tools = [query_clinical_data, update_case_report, export_regulatory_document, search_medical_literature]
-
+    # ── Agent ────────────────────────────────────────────────────────────
     agent = Agent(
-        role="Pharmacovigilance Specialist",
-        goal="Analyze clinical trial safety data and prepare regulatory reports",
-        backstory=(
-            "You are an experienced pharmacovigilance specialist with expertise "
-            "in clinical trial safety data analysis, adverse event reporting, "
-            "and regulatory submissions."
-        ),
-        tools=tools,
-        llm="gpt-4.1",
-        verbose=True,
+        role="Assistant",
+        goal="Execute tool calls as instructed",
+        backstory="You are a helpful assistant that follows instructions precisely.",
+        tools=ALL_TOOLS,
+        llm="gpt-4.1-mini",
+        verbose=False,
     )
 
-    crew_task = Task(
-        description=task,
-        agent=agent,
-        expected_output="A comprehensive safety review with clinical assessment and regulatory narrative",
-    )
+    # ── Banner ───────────────────────────────────────────────────────────
+    print_banner("CrewAI", args.mode, console=args.console)
 
-    crew = Crew(agents=[agent], tasks=[crew_task], verbose=True)
+    # ── Run scenarios ────────────────────────────────────────────────────
+    for i, (desc, tool_name, tool_args, expected) in enumerate(scenarios, 1):
+        print_scenario(i, len(scenarios), desc)
 
-    # Banner
-    print_banner("CrewAI", principal, args.mode)
-    print_header(f"TASK: {task}")
-    print_event("Adapter", "CrewAIAdapter -> register(before_tool_call, after_tool_call)")
-    print()
+        args_str = ", ".join(
+            f'{k}="{v}"' if isinstance(v, str) else f"{k}={v}"
+            for k, v in tool_args.items()
+        )
+        prompt = (
+            f"Call the {tool_name} tool with these exact arguments: {args_str}. "
+            f"Do not call any other tools."
+        )
 
-    # Run crew
-    result = crew.kickoff()
+        mark_sink(sink)
 
-    # Display result
-    print_header("CREW RESULT")
-    raw = str(result.raw) if hasattr(result, "raw") else str(result)
-    print(f"  {raw[:500]}")
-    if len(raw) > 500:
-        print(f"  ... ({len(raw)} chars total)")
+        try:
+            task = Task(
+                description=prompt,
+                expected_output="The tool result",
+                agent=agent,
+            )
+            crew = Crew(agents=[agent], tasks=[task], verbose=False)
+            result = crew.kickoff()
 
-    # PII warnings
+            # Use audit-based classification first, fallback to output parsing
+            action, detail = classify_result(sink, tool_name, expected)
+            if action:
+                print_result(action, detail)
+            else:
+                output = str(result.raw) if hasattr(result, "raw") else str(result)
+                if output.startswith("DENIED:"):
+                    print_result("DENIED", output[7:].strip())
+                elif "[REDACTED]" in output:
+                    print_result("REDACTED", "PII detected and redacted in output")
+                elif expected == "approval":
+                    print_result("APPROVAL", output[:100])
+                else:
+                    print_result("ALLOWED", f"{tool_name} executed")
+        except Exception as e:
+            err = str(e)[:100]
+            if expected == "approval":
+                print_result("APPROVAL", err)
+            else:
+                print_result("DENIED", err)
+
+    # ── PII warnings ────────────────────────────────────────────────────
     if pii_warnings:
-        print_header("PII WARNINGS")
-        for i, w in enumerate(pii_warnings, 1):
+        print(f"\n{'─' * 60}")
+        print("  PII WARNINGS")
+        print(f"{'─' * 60}")
+        for idx, w in enumerate(pii_warnings, 1):
             for finding in w["findings"]:
-                print(f"  {i}. {finding}")
+                print(f"  {idx}. {finding}")
 
-    # Known limitations
-    print_header("KNOWN LIMITATIONS")
-    print("  1. Global hooks: hooks are registered globally. Multiple")
-    print("     adapters in the same process would conflict.")
-    print("  2. PII redaction: after_hook returns redacted string so CrewAI")
-    print("     replaces the tool result (undocumented, may change).")
-    print()
+    # ── Summary ──────────────────────────────────────────────────────────
+    if sink:
+        print_audit_summary(sink)
+    else:
+        print(f"\n{'=' * 60}")
+        print("  (Audit events sent to edictum-console)")
 
-    # Audit + token summaries
-    print_audit_summary(sink)
+    # ── Cleanup ──────────────────────────────────────────────────────────
+    if args.console:
+        await guard.close()
 
-    # Token tracking from CrewAI result
-    input_tokens = 0
-    output_tokens = 0
-    llm_calls = 0
-    usage = getattr(result, "token_usage", None)
-    if usage:
-        input_tokens = getattr(usage, "prompt_tokens", 0) or 0
-        output_tokens = getattr(usage, "completion_tokens", 0) or 0
-        llm_calls = getattr(usage, "successful_requests", 0) or 0
-
-    print_token_summary(input_tokens, output_tokens, llm_calls)
-
-    print("  The agent was non-deterministic. The governance was not.")
-    print("=" * 70)
-    teardown_otel()
+    print("=" * 60)
 
 
 if __name__ == "__main__":
-    main()
+    asyncio.run(main())

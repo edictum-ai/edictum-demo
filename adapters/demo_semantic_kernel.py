@@ -3,193 +3,185 @@ Edictum Semantic Kernel Adapter Demo
 ======================================
 
 Demonstrates Edictum governance using the Semantic Kernel adapter with
-kernel filters. The agent uses GPT-4.1 for pharmacovigilance tasks while
-Edictum governs every tool call transparently via AUTO_FUNCTION_INVOCATION
-filters.
-
-NOTE: Semantic Kernel uses `pluginName-functionName` format for tool names
-(e.g., `pharma-query_clinical_data`). The adapter registers a kernel filter
-that intercepts these calls before/after execution, stripping the plugin
-prefix when creating Edictum envelopes.
+AUTO_FUNCTION_INVOCATION kernel filters. Exercises ALL contract types via
+directed tool calls: pre/post/session/sandbox contracts, deny/redact/warn/
+approve effects, RBAC, and observe mode.
 
 Usage:
     python adapters/demo_semantic_kernel.py
     python adapters/demo_semantic_kernel.py --mode observe
-    python adapters/demo_semantic_kernel.py --role researcher
-    python adapters/demo_semantic_kernel.py --role researcher --ticket CAPA-2025-042
+    python adapters/demo_semantic_kernel.py --console
+    python adapters/demo_semantic_kernel.py --quick --role admin
 """
 
 from __future__ import annotations
 
 import asyncio
-
-from edictum import Edictum
-from edictum.adapters.semantic_kernel import SemanticKernelAdapter
-from semantic_kernel import Kernel
-from semantic_kernel.connectors.ai.open_ai import OpenAIChatCompletion
-from semantic_kernel.functions import kernel_function
-from semantic_kernel.contents.chat_history import ChatHistory
-from semantic_kernel.connectors.ai.function_choice_behavior import FunctionChoiceBehavior
-
 import sys
 from pathlib import Path
-sys.path.insert(0, str(Path(__file__).parent))
 
-from shared import (  # noqa: E402
-    query_clinical_data as shared_query_clinical_data,
-    update_case_report as shared_update_case_report,
-    export_regulatory_document as shared_export_regulatory_document,
-    search_medical_literature as shared_search_medical_literature,
-    redact_pii,
-    CollectingAuditSink,
-    CONTRACTS_PATH,
-    SYSTEM_PROMPT,
-    DEFAULT_TASK,
+sys.path.insert(0, str(Path(__file__).parent))
+from shared_v2 import (  # noqa: E402
+    get_weather as _get_weather,
+    search_web as _search_web,
+    read_file as _read_file,
+    send_email as _send_email,
+    update_record as _update_record,
+    delete_record as _delete_record,
+    SCENARIOS,
+    QUICK_SCENARIOS,
+    create_standalone_guard,
+    create_console_guard,
+    classify_result,
+    mark_sink,
+    get_local_sink,
     parse_args,
     make_principal,
     print_banner,
-    print_header,
+    print_scenario,
+    print_result,
     print_audit_summary,
-    print_token_summary,
-    setup_otel,
-    teardown_otel,
 )
 
+from edictum.adapters.semantic_kernel import SemanticKernelAdapter
+from semantic_kernel import Kernel
+from semantic_kernel.functions import kernel_function
+from semantic_kernel.connectors.ai.open_ai import OpenAIChatCompletion
+from semantic_kernel.agents import ChatCompletionAgent
+from semantic_kernel.contents import ChatHistory
 
-# ─── Semantic Kernel plugin ─────────────────────────────────────────────────
 
-class PharmaPlugin:
-    """Wraps shared pharma tools as Semantic Kernel kernel functions."""
+# ─── Semantic Kernel plugin ──────────────────────────────────────────────────
 
-    @kernel_function(
-        name="query_clinical_data",
-        description=(
-            "Query clinical trial databases. Available datasets: "
-            "trial_summary, adverse_events_summary, adverse_events_detailed, "
-            "patient_records, lab_results."
-        ),
-    )
-    def query_clinical_data(self, dataset: str, query: str = "") -> str:
-        return shared_query_clinical_data(dataset, query)
+class DemoPlugin:
+    """Wraps shared mock tools as Semantic Kernel kernel functions."""
 
-    @kernel_function(
-        name="update_case_report",
-        description="Update a section of an adverse event case report.",
-    )
-    def update_case_report(self, event_id: str, section: str, content: str) -> str:
-        return shared_update_case_report(event_id, section, content)
+    @kernel_function(name="get_weather", description="Get current weather for a city.")
+    def get_weather(self, city: str) -> str:
+        return _get_weather(city)
 
-    @kernel_function(
-        name="export_regulatory_document",
-        description="Export a document for regulatory submission.",
-    )
-    def export_regulatory_document(self, document_type: str, trial_id: str, content: str) -> str:
-        return shared_export_regulatory_document(document_type, trial_id, content)
+    @kernel_function(name="search_web", description="Search the web for information.")
+    def search_web(self, query: str) -> str:
+        return _search_web(query)
 
-    @kernel_function(
-        name="search_medical_literature",
-        description="Search medical literature for relevant publications.",
-    )
-    def search_medical_literature(self, terms: str, max_results: int = 5) -> str:
-        return shared_search_medical_literature(terms, max_results)
+    @kernel_function(name="read_file", description="Read a file from the filesystem.")
+    def read_file(self, path: str) -> str:
+        return _read_file(path)
+
+    @kernel_function(name="send_email", description="Send an email to a recipient.")
+    def send_email(self, to: str, subject: str, body: str) -> str:
+        return _send_email(to, subject, body)
+
+    @kernel_function(name="update_record", description="Update a record in the database.")
+    def update_record(self, record_id: str, data: str, confirmed: bool = False) -> str:
+        return _update_record(record_id, data, confirmed)
+
+    @kernel_function(name="delete_record", description="Delete a record from the database.")
+    def delete_record(self, record_id: str) -> str:
+        return _delete_record(record_id)
 
 
 # ─── Main ────────────────────────────────────────────────────────────────────
 
 async def main():
     args = parse_args("Semantic Kernel")
-    principal = make_principal(args.role, args.ticket)
-    task = args.task or DEFAULT_TASK
-    setup_otel()
+    principal = make_principal(args.role)
+    scenarios = QUICK_SCENARIOS if args.quick else SCENARIOS
 
-    # Audit sink
-    sink = CollectingAuditSink()
-
-    # Governance guard
-    guard = Edictum.from_yaml(
-        str(CONTRACTS_PATH),
-        mode="observe" if args.mode == "observe" else None,
-        audit_sink=sink,
-    )
+    # Create governance guard
+    if args.console:
+        guard = await create_console_guard(
+            agent_id="edictum-sk-agent",
+            bundle_name="edictum-adapter-demos",
+        )
+    else:
+        guard = create_standalone_guard(mode=args.mode)
 
     # Semantic Kernel setup
     kernel = Kernel()
-    kernel.add_service(OpenAIChatCompletion(service_id="chat", ai_model_id="gpt-4.1"))
-    kernel.add_plugin(PharmaPlugin(), "pharma")
+    kernel.add_plugin(DemoPlugin(), plugin_name="demo")
 
     # Edictum adapter — registers AUTO_FUNCTION_INVOCATION filter on kernel
-    def redact_callback(result, findings):
-        if isinstance(result, str):
-            return redact_pii(result)
-        return result
-
     adapter = SemanticKernelAdapter(guard, principal=principal)
-    adapter.register(kernel, on_postcondition_warn=redact_callback)
+    adapter.register(kernel)
 
-    # Banner
-    print_banner("Semantic Kernel", principal, args.mode)
-    print_header(f"TASK: {task}")
+    # LLM service + agent
+    service = OpenAIChatCompletion(service_id="openai", ai_model_id="gpt-4.1-mini")
+    kernel.add_service(service)
 
-    # Chat loop — SK needs iterative calls for multi-turn function calling
-    chat_service = kernel.get_service("chat")
-    settings = kernel.get_prompt_execution_settings_from_service_id("chat")
-    settings.function_choice_behavior = FunctionChoiceBehavior.Auto()
+    agent = ChatCompletionAgent(
+        kernel=kernel,
+        service=service,
+        name="demo-agent",
+        instructions=(
+            "You are a helpful assistant. When asked to call a tool, call it "
+            "with the exact arguments provided. Do not call any other tools."
+        ),
+    )
 
-    chat_history = ChatHistory(system_message=SYSTEM_PROMPT)
-    chat_history.add_user_message(task)
+    print_banner("Semantic Kernel", args.mode, console=args.console)
 
-    total_input_tokens = 0
-    total_output_tokens = 0
-    llm_calls = 0
+    # Get audit sink for result classification
+    sink = get_local_sink(guard)
 
-    while True:
-        result = await chat_service.get_chat_message_content(
-            chat_history, settings, kernel=kernel
+    # Run each scenario with a directive prompt
+    for i, (desc, tool_name, tool_args, expected) in enumerate(scenarios, 1):
+        print_scenario(i, len(scenarios), desc)
+
+        args_str = ", ".join(
+            f'{k}="{v}"' if isinstance(v, str) else f"{k}={v}"
+            for k, v in tool_args.items()
+        )
+        prompt = (
+            f"Call the {tool_name} tool with these exact arguments: {args_str}. "
+            f"Do not call any other tools."
         )
 
-        # SK manages chat_history internally for tool call rounds.
-        # Only add the message when it's the final assistant response
-        # (not a tool result, which SK already appended during invoke).
-        from semantic_kernel.contents import AuthorRole
-        if result.role != AuthorRole.TOOL:
-            chat_history.add_message(result)
+        mark_sink(sink)
 
-        # Track tokens from result metadata
-        if hasattr(result, "metadata") and result.metadata:
-            usage = result.metadata.get("usage", None)
-            if usage:
-                llm_calls += 1
-                total_input_tokens += getattr(usage, "prompt_tokens", 0)
-                total_output_tokens += getattr(usage, "completion_tokens", 0)
+        try:
+            history = ChatHistory()
+            history.add_user_message(prompt)
 
-        # Check if done (no more function calls pending)
-        if not result.items or not any(
-            hasattr(item, "function_name")
-            for item in result.items
-            if hasattr(item, "function_name")
-        ):
-            break
+            response_text = ""
+            async for message in agent.invoke(history):
+                response_text = str(message.content) if message.content else ""
 
-    # Display final response
-    print_header("AGENT RESPONSE")
-    final_text = str(result)
-    print(f"  {final_text[:500]}")
-    if len(final_text) > 500:
-        print(f"  ... ({len(final_text)} chars total)")
+            # Use audit-based classification first, fallback to output parsing
+            action, detail = classify_result(sink, tool_name, expected)
+            if action:
+                print_result(action, detail)
+            elif "DENIED:" in response_text:
+                denied_part = response_text.split("DENIED:", 1)[1].strip()
+                print_result("DENIED", denied_part[:100])
+            elif "[REDACTED]" in response_text:
+                print_result("REDACTED", "PII detected and redacted in output")
+            elif "approval" in response_text.lower():
+                print_result("APPROVAL", response_text[:100])
+            else:
+                print_result("ALLOWED", f"{tool_name} executed")
 
-    # Note about SK tool naming
-    print()
-    print("  NOTE: Semantic Kernel uses 'pluginName-functionName' format")
-    print("  (e.g., pharma-query_clinical_data). The Edictum adapter")
-    print("  intercepts calls via AUTO_FUNCTION_INVOCATION kernel filter.")
+        except Exception as exc:
+            exc_str = str(exc)
+            if "DENIED:" in exc_str:
+                denied_part = exc_str.split("DENIED:", 1)[1].strip()
+                print_result("DENIED", denied_part[:100])
+            else:
+                print_result("DENIED", exc_str[:100])
 
-    # Summaries
-    print_audit_summary(sink)
-    print_token_summary(total_input_tokens, total_output_tokens, llm_calls)
+    # Audit summary
+    if not args.console:
+        print_audit_summary(sink)
+    else:
+        print(f"\n{'=' * 60}")
+        print("  GOVERNANCE SUMMARY")
+        print(f"{'=' * 60}")
+        print("  (Audit data sent to edictum-console server)")
+        print()
 
-    print("  The agent was non-deterministic. The governance was not.")
-    print("=" * 70)
-    teardown_otel()
+    # Cleanup
+    if args.console and hasattr(guard, "close"):
+        await guard.close()
 
 
 if __name__ == "__main__":

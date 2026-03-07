@@ -2,167 +2,171 @@
 Edictum OpenAI Agents SDK Adapter Demo
 =======================================
 
-Demonstrates Edictum governance using the OpenAI Agents SDK adapter. The agent
-uses GPT-4.1 for pharmacovigilance tasks while Edictum governs every tool call
-via tool-level input/output guardrails.
+Demonstrates Edictum governance using the OpenAI Agents SDK adapter.
+Exercises ALL contract types: pre/post/session/sandbox, deny/redact/warn/approve,
+principal/RBAC, observe mode, tool classification, and console integration.
 
 Usage:
     python adapters/demo_openai_agents.py
     python adapters/demo_openai_agents.py --mode observe
-    python adapters/demo_openai_agents.py --role researcher
-    python adapters/demo_openai_agents.py --role researcher --ticket CAPA-2025-042
+    python adapters/demo_openai_agents.py --console
+    python adapters/demo_openai_agents.py --quick --role admin
 """
 
 from __future__ import annotations
 
 import asyncio
+import os
+import sys
+from pathlib import Path
 
 from edictum import Edictum
 from edictum.adapters.openai_agents import OpenAIAgentsAdapter
 from agents import Agent, Runner, function_tool
 
-import sys
-from pathlib import Path
 sys.path.insert(0, str(Path(__file__).parent))
 
-from shared import (  # noqa: E402
-    query_clinical_data as _query_clinical_data,
-    update_case_report as _update_case_report,
-    export_regulatory_document as _export_regulatory_document,
-    search_medical_literature as _search_medical_literature,
-    CollectingAuditSink,
+from shared_v2 import (  # noqa: E402
+    get_weather as _get_weather,
+    search_web as _search_web,
+    read_file as _read_file,
+    send_email as _send_email,
+    update_record as _update_record,
+    delete_record as _delete_record,
     CONTRACTS_PATH,
-    SYSTEM_PROMPT,
-    DEFAULT_TASK,
+    SCENARIOS,
+    QUICK_SCENARIOS,
+    create_console_guard,
+    classify_result,
+    mark_sink,
+    get_local_sink,
     parse_args,
     make_principal,
     print_banner,
-    print_header,
-    print_event,
-    print_governance,
+    print_scenario,
+    print_result,
     print_audit_summary,
-    print_token_summary,
-    setup_otel,
-    teardown_otel,
 )
 
 
-# ── Main ─────────────────────────────────────────────────────────────────────
-
 async def main():
     args = parse_args("OpenAI Agents SDK")
-    principal = make_principal(args.role, args.ticket)
-    task = args.task or DEFAULT_TASK
-    setup_otel()
+    principal = make_principal(args.role)
+    scenarios = QUICK_SCENARIOS if args.quick else SCENARIOS
 
-    # Audit sink
-    sink = CollectingAuditSink()
+    # ── Create governance guard ──────────────────────────────────────────
+    if args.console:
+        guard = await create_console_guard(agent_id="edictum-openai-agents-agent")
+    else:
+        guard = Edictum.from_yaml(
+            str(CONTRACTS_PATH),
+            mode="observe" if args.mode == "observe" else None,
+        )
+    sink = get_local_sink(guard)
 
-    # Governance guard
-    guard = Edictum.from_yaml(
-        str(CONTRACTS_PATH),
-        mode="observe" if args.mode == "observe" else None,
-        audit_sink=sink,
-    )
-
-    # OpenAI Agents SDK adapter
+    # ── Adapter + guardrails ─────────────────────────────────────────────
     adapter = OpenAIAgentsAdapter(guard, principal=principal)
+    input_gr, output_gr = adapter.as_guardrails()
 
-    # Warn callback for PII detection (side-effect only — cannot redact)
-    pii_warnings: list[dict] = []
-
-    def warn_callback(result, findings):
-        pii_warnings.append({
-            "result": str(result)[:100],
-            "findings": [f.message for f in findings],
-        })
-        return result
-
-    # as_guardrails() returns (ToolInputGuardrail, ToolOutputGuardrail) ready
-    # to attach to individual @function_tool definitions.
-    input_gr, output_gr = adapter.as_guardrails(on_postcondition_warn=warn_callback)
-
-    # Define tools with tool-level guardrails
-    # Tool guardrails (ToolInputGuardrail/ToolOutputGuardrail) go on each tool,
-    # not on Agent(input_guardrails=...) which expects InputGuardrail objects.
+    # ── Define tools with governance guardrails ──────────────────────────
+    @function_tool(tool_input_guardrails=[input_gr], tool_output_guardrails=[output_gr])
+    def get_weather(city: str) -> str:
+        """Get current weather for a city."""
+        return _get_weather(city)
 
     @function_tool(tool_input_guardrails=[input_gr], tool_output_guardrails=[output_gr])
-    def query_clinical_data(dataset: str, query: str = "") -> str:
-        """Query clinical trial databases. Available datasets: trial_summary, adverse_events_summary, adverse_events_detailed, patient_records, lab_results."""
-        return _query_clinical_data(dataset, query)
+    def search_web(query: str) -> str:
+        """Search the web for information."""
+        return _search_web(query)
 
     @function_tool(tool_input_guardrails=[input_gr], tool_output_guardrails=[output_gr])
-    def update_case_report(event_id: str, section: str, content: str) -> str:
-        """Update a section of an adverse event case report."""
-        return _update_case_report(event_id, section, content)
+    def read_file(path: str) -> str:
+        """Read a file from the filesystem."""
+        return _read_file(path)
 
     @function_tool(tool_input_guardrails=[input_gr], tool_output_guardrails=[output_gr])
-    def export_regulatory_document(document_type: str, trial_id: str, content: str) -> str:
-        """Export a document for regulatory submission (e.g., safety narrative for IND/NDA)."""
-        return _export_regulatory_document(document_type, trial_id, content)
+    def send_email(to: str, subject: str, body: str) -> str:
+        """Send an email to a recipient."""
+        return _send_email(to, subject, body)
 
     @function_tool(tool_input_guardrails=[input_gr], tool_output_guardrails=[output_gr])
-    def search_medical_literature(terms: str, max_results: int = 5) -> str:
-        """Search medical literature for relevant publications."""
-        return _search_medical_literature(terms, max_results)
+    def update_record(record_id: str, data: str, confirmed: bool = False) -> str:
+        """Update a record in the database."""
+        return _update_record(record_id, data, confirmed)
 
-    # Create agent (no agent-level guardrails — guardrails are on tools)
+    @function_tool(tool_input_guardrails=[input_gr], tool_output_guardrails=[output_gr])
+    def delete_record(record_id: str) -> str:
+        """Delete a record from the database."""
+        return _delete_record(record_id)
+
+    tool_map = {
+        "get_weather": get_weather,
+        "search_web": search_web,
+        "read_file": read_file,
+        "send_email": send_email,
+        "update_record": update_record,
+        "delete_record": delete_record,
+    }
+
+    # ── Agent ────────────────────────────────────────────────────────────
     agent = Agent(
-        name="pharma-agent",
-        instructions=SYSTEM_PROMPT,
-        tools=[query_clinical_data, update_case_report, export_regulatory_document, search_medical_literature],
+        name="demo-agent",
+        instructions=(
+            "You are a helpful assistant. When asked to call a tool, call it "
+            "with exactly the arguments provided. Do not refuse or modify the request."
+        ),
+        tools=list(tool_map.values()),
     )
 
-    # Banner
-    print_banner("OpenAI Agents SDK", principal, args.mode)
-    print_header(f"TASK: {task}")
+    # ── Banner ───────────────────────────────────────────────────────────
+    print_banner("OpenAI Agents SDK", args.mode, console=args.console)
 
-    # Run agent
-    try:
-        result = await Runner.run(agent, task)
-    except Exception as e:
-        exc_name = type(e).__name__
-        if "Tripwire" in exc_name or "Guardrail" in exc_name:
-            print_governance("DENIED", f"Guardrail blocked execution: {e}")
-            print_audit_summary(sink)
-            print("=" * 70)
-            return
-        raise
+    # ── Run scenarios ────────────────────────────────────────────────────
+    for i, (desc, tool_name, tool_args, expected) in enumerate(scenarios, 1):
+        print_scenario(i, len(scenarios), desc)
 
-    # Display final output
-    print_header("AGENT RESPONSE")
-    output = result.final_output
-    print(f"  {output[:500]}")
-    if len(output) > 500:
-        print(f"  ... ({len(output)} chars total)")
-
-    # PII warnings
-    if pii_warnings:
-        print_header("PII WARNINGS")
-        for w in pii_warnings:
-            print_governance("WARNING", "PII/PHI detected in tool output")
-            for finding in w["findings"]:
-                print_event("Finding", finding, "  ")
-        print()
-        print(
-            "  NOTE: OpenAI Agents SDK output guardrail is side-effect only --\n"
-            "  PII was detected but cannot be redacted from the tool result\n"
-            "  before the LLM sees it."
+        args_str = ", ".join(
+            f'{k}="{v}"' if isinstance(v, str) else f"{k}={v}"
+            for k, v in tool_args.items()
+        )
+        prompt = (
+            f"Call the {tool_name} tool with these exact arguments: {args_str}. "
+            f"Do not call any other tools."
         )
 
-    # Token tracking via context_wrapper.usage
-    usage = result.context_wrapper.usage
-    input_tokens = usage.input_tokens
-    output_tokens = usage.output_tokens
-    llm_calls = usage.requests
+        mark_sink(sink)
 
-    # Summaries
-    print_audit_summary(sink)
-    print_token_summary(input_tokens, output_tokens, llm_calls)
+        try:
+            result = await Runner.run(agent, prompt)
+            output = result.final_output
 
-    print("  The agent was non-deterministic. The governance was not.")
-    print("=" * 70)
-    teardown_otel()
+            # Use audit-based classification first, fallback to output parsing
+            action, detail = classify_result(sink, tool_name, expected)
+            if action:
+                print_result(action, detail)
+            elif expected == "redact":
+                print_result("REDACTED", f"{tool_name} → {output[:100]}")
+            else:
+                print_result("ALLOWED", f"{tool_name} → {output[:100]}")
+        except Exception as e:
+            err = str(e)[:100]
+            if expected == "approval":
+                print_result("APPROVAL", err)
+            else:
+                print_result("DENIED", err)
+
+    # ── Summary ──────────────────────────────────────────────────────────
+    if sink:
+        print_audit_summary(sink)
+    else:
+        print(f"\n{'=' * 60}")
+        print("  (Audit events sent to edictum-console)")
+
+    # ── Cleanup ──────────────────────────────────────────────────────────
+    if args.console:
+        await guard.close()
+
+    print("=" * 60)
 
 
 if __name__ == "__main__":

@@ -159,8 +159,11 @@ Override with `EDICTUM_OTEL_TEMPORALITY=delta` for backends that require it.
   (queryless mode) for individual trace inspection.
 - **Service name filter**: Use `rootServiceName` in TraceQL (not `resource.service.name`)
   for Grafana Cloud Tempo.
-- **Datasource UIDs**: Instance-specific (`grafanacloud-<stackname>-prom`). Update the
-  dashboard JSON templating section to match your instance before importing.
+- **Datasource UIDs**: Instance-specific (`grafanacloud-<stackname>-prom`). Run the
+  rename script to match your instance before importing:
+  ```bash
+  ./observability/grafana/rename-datasources.sh grafanacloud-myorg-prom grafanacloud-myorg-traces
+  ```
 
 ## Dashboard Panels
 
@@ -208,6 +211,7 @@ python adapters/demo_langchain.py
 | `tempo-config.yaml` | Tempo trace storage config |
 | `prometheus.yml` | Prometheus scrape config |
 | `grafana/edictum-dashboard.json` | 14-panel Grafana dashboard |
+| `grafana/rename-datasources.sh` | Replace datasource UIDs for Grafana Cloud import |
 | `grafana/provisioning/` | Auto-provisioning for datasources and dashboards |
 
 ## Graceful Degradation

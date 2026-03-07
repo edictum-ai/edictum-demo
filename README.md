@@ -23,15 +23,28 @@ Each scenario includes a governed agent AND an unguarded baseline for comparison
 
 ### Framework Adapters
 
-Same governance contracts, 5 different agent frameworks. Proves Edictum is framework-agnostic.
+Same governance contracts, 8 different agent frameworks. Proves Edictum is framework-agnostic.
 
 | Framework | Demo | Adapter API |
 |-----------|------|-------------|
 | LangChain + LangGraph | `adapters/demo_langchain.py` | `adapter.as_tool_wrapper()` |
 | OpenAI Agents SDK | `adapters/demo_openai_agents.py` | `adapter.as_guardrails()` |
-| CrewAI | `adapters/demo_crewai.py` | `adapter.register()` |
 | Agno | `adapters/demo_agno.py` | `adapter.as_tool_hook()` |
 | Semantic Kernel | `adapters/demo_semantic_kernel.py` | `adapter.register(kernel)` |
+| CrewAI | `adapters/demo_crewai.py` | `adapter.register()` |
+| Google ADK | `adapters/demo_google_adk.py` | `adapter.as_plugin()` |
+| Claude Agent SDK | `adapters/demo_claude_agent_sdk.py` | `adapter.to_hook_callables()` |
+| Nanobot | *(on droplet)* | `GovernedToolRegistry` |
+
+### Hot Reload Test
+
+Validates that contract changes deployed via the console reach connected agents in
+real-time via SSE -- no agent restart needed. Fast, deterministic, no LLM calls.
+
+```bash
+python adapters/test_hot_reload.py                   # needs console on localhost:8000
+python adapters/test_hot_reload.py --agents 5         # test with more concurrent agents
+```
 
 ### Adversarial Testing
 
@@ -46,7 +59,8 @@ python adversarial/test_adversarial.py --model qwen
 ### Benchmarks
 
 ```bash
-python benchmark/benchmark_latency.py          # Governance overhead: ~55us
+python benchmark/benchmark_adapters.py         # Per-adapter overhead: ~43us across all 8
+python benchmark/benchmark_latency.py          # End-to-end with real LLM calls
 python benchmark/prompt_vs_contracts.py         # Prompt engineering vs contracts
 ```
 
@@ -66,8 +80,11 @@ cp .env.example .env
 ```
 
 Required API keys:
-- `OPENAI_API_KEY` -- for GPT-4.1 agent demos
+- `OPENAI_API_KEY` -- for GPT-4.1 agent demos (LangChain, OpenAI Agents, SK, CrewAI, Agno)
+- `GEMINI_API_KEY` -- for Google ADK demo
+- `ANTHROPIC_API_KEY` -- for Claude Agent SDK demo
 - `OPENROUTER_API_KEY` -- for DeepSeek/Qwen adversarial tests and DevOps demos
+- `EDICTUM_API_KEY` -- for edictum-console connected mode (optional)
 - `OTEL_EXPORTER_OTLP_ENDPOINT` + `OTEL_EXPORTER_OTLP_HEADERS` -- for Grafana Cloud (optional)
 
 ## Quick start
@@ -100,9 +117,9 @@ edictum-demo/
     devops/                     # File organizer with blast radius limits
     fintech/                    # Trading compliance
     customer-support/           # Support agent with data minimization
-  adapters/                     # 5 framework comparison demos
+  adapters/                     # 8 framework comparison demos
   adversarial/                  # Multi-model adversarial tests
-  benchmark/                    # Latency + prompt-vs-contracts benchmarks
+  benchmark/                    # Adapter overhead + latency + prompt-vs-contracts
   observability/                # OTel config + Grafana dashboard
   docs/                         # Adapter development insights
   examples/                     # Claude Agent SDK demo
@@ -112,8 +129,14 @@ edictum-demo/
 
 | Variable | Description |
 |----------|-------------|
-| `OPENAI_API_KEY` | OpenAI API key (pharma, fintech, support demos) |
+| `OPENAI_API_KEY` | OpenAI API key (LangChain, OpenAI Agents, SK, CrewAI, Agno, scenarios) |
+| `GEMINI_API_KEY` | Google Gemini API key (Google ADK demo) |
+| `ANTHROPIC_API_KEY` | Anthropic API key (Claude Agent SDK demo) |
 | `OPENROUTER_API_KEY` | OpenRouter API key (DevOps, adversarial tests) |
+| `EDICTUM_API_KEY` | API key for edictum-console connected mode |
+| `EDICTUM_URL` | edictum-console server URL (default: `http://localhost:8000`) |
+| `EDICTUM_ADMIN_EMAIL` | Console admin email for hot reload test (default: `admin@demo.test`) |
+| `EDICTUM_ADMIN_PASSWORD` | Console admin password for hot reload test (default: `edictum2026`) |
 | `EDICTUM_MODEL` | Override LLM model for DevOps/SDK demos |
 | `EDICTUM_OTEL_CONSOLE` | Set to `1` for console OTel output |
 | `OTEL_EXPORTER_OTLP_ENDPOINT` | OTLP endpoint for Grafana Cloud |

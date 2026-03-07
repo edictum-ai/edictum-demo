@@ -3,169 +3,213 @@ Edictum LangChain + LangGraph Adapter Demo
 ============================================
 
 Demonstrates Edictum governance using the LangChain adapter with a LangGraph
-ReAct agent. The agent uses GPT-4.1 for pharmacovigilance tasks while Edictum
-governs every tool call transparently.
+agent. Exercises ALL contract types via directed tool calls: pre/post/
+session/sandbox contracts, deny/redact/warn/approve effects, RBAC, and
+observe mode.
+
+Uses the new ``create_agent`` + ``wrap_tool_call`` middleware API
+(langchain >=1.2, langgraph >=1.0).
 
 Usage:
     python adapters/demo_langchain.py
     python adapters/demo_langchain.py --mode observe
-    python adapters/demo_langchain.py --role researcher
-    python adapters/demo_langchain.py --role researcher --ticket CAPA-2025-042
+    python adapters/demo_langchain.py --console
+    python adapters/demo_langchain.py --quick --role admin
 """
 
 from __future__ import annotations
 
 import asyncio
-import json
-
-from edictum import Edictum
-from edictum.adapters.langchain import LangChainAdapter
-from langchain_openai import ChatOpenAI
-from langchain_core.tools import tool
-from langgraph.prebuilt import create_react_agent, ToolNode
-
+import os
 import sys
 from pathlib import Path
-sys.path.insert(0, str(Path(__file__).parent))
 
-from shared import (  # noqa: E402
-    query_clinical_data as _query_clinical_data,
-    update_case_report as _update_case_report,
-    export_regulatory_document as _export_regulatory_document,
-    search_medical_literature as _search_medical_literature,
-    redact_pii,
-    CollectingAuditSink,
-    CONTRACTS_PATH,
-    SYSTEM_PROMPT,
-    DEFAULT_TASK,
+sys.path.insert(0, str(Path(__file__).parent))
+from shared_v2 import (  # noqa: E402
+    get_weather as _get_weather,
+    search_web as _search_web,
+    read_file as _read_file,
+    send_email as _send_email,
+    update_record as _update_record,
+    delete_record as _delete_record,
+    SCENARIOS,
+    QUICK_SCENARIOS,
+    create_standalone_guard,
+    create_console_guard,
+    classify_result,
+    mark_sink,
+    get_local_sink,
     parse_args,
     make_principal,
     print_banner,
-    print_header,
-    print_event,
-    print_governance,
+    print_scenario,
+    print_result,
     print_audit_summary,
-    print_token_summary,
-    setup_otel,
-    teardown_otel,
 )
+
+from edictum.adapters.langchain import LangChainAdapter
+from langchain_openai import ChatOpenAI
+from langchain_core.tools import tool
+from langchain.agents import create_agent
+from langchain.agents.middleware import wrap_tool_call
 
 
 # ─── LangChain tool wrappers ─────────────────────────────────────────────────
 
 @tool
-def query_clinical_data(dataset: str, query: str = "") -> str:
-    """Query clinical trial databases. Available datasets: trial_summary, adverse_events_summary, adverse_events_detailed, patient_records, lab_results."""
-    return _query_clinical_data(dataset, query)
+def get_weather(city: str) -> str:
+    """Get current weather for a city."""
+    return _get_weather(city)
 
 
 @tool
-def update_case_report(event_id: str, section: str, content: str) -> str:
-    """Update a section of an adverse event case report."""
-    return _update_case_report(event_id, section, content)
+def search_web(query: str) -> str:
+    """Search the web for information."""
+    return _search_web(query)
 
 
 @tool
-def export_regulatory_document(document_type: str, trial_id: str, content: str) -> str:
-    """Export a document for regulatory submission (e.g., safety narrative for IND/NDA)."""
-    return _export_regulatory_document(document_type, trial_id, content)
+def read_file(path: str) -> str:
+    """Read a file from the filesystem."""
+    return _read_file(path)
 
 
 @tool
-def search_medical_literature(terms: str, max_results: int = 5) -> str:
-    """Search medical literature for relevant publications."""
-    return _search_medical_literature(terms, max_results)
+def send_email(to: str, subject: str, body: str) -> str:
+    """Send an email to a recipient."""
+    return _send_email(to, subject, body)
+
+
+@tool
+def update_record(record_id: str, data: str, confirmed: bool = False) -> str:
+    """Update a record in the database."""
+    return _update_record(record_id, data, confirmed)
+
+
+@tool
+def delete_record(record_id: str) -> str:
+    """Delete a record from the database."""
+    return _delete_record(record_id)
+
+
+# ─── Tool registry for lookup by name ────────────────────────────────────────
+
+TOOL_MAP = {
+    "get_weather": get_weather,
+    "search_web": search_web,
+    "read_file": read_file,
+    "send_email": send_email,
+    "update_record": update_record,
+    "delete_record": delete_record,
+}
+
+ALL_TOOLS = list(TOOL_MAP.values())
 
 
 # ─── Main ────────────────────────────────────────────────────────────────────
 
 async def main():
     args = parse_args("LangChain")
-    principal = make_principal(args.role, args.ticket)
-    task = args.task or DEFAULT_TASK
-    setup_otel()
+    principal = make_principal(args.role)
+    scenarios = QUICK_SCENARIOS if args.quick else SCENARIOS
 
-    # Audit sink
-    sink = CollectingAuditSink()
+    # Create governance guard
+    if args.console:
+        guard = await create_console_guard(
+            agent_id="edictum-langchain-agent",
+            bundle_name="edictum-adapter-demos",
+        )
+    else:
+        guard = create_standalone_guard(mode=args.mode)
 
-    # Governance guard
-    guard = Edictum.from_yaml(
-        str(CONTRACTS_PATH),
-        mode="observe" if args.mode == "observe" else None,
-        audit_sink=sink,
-    )
-
-    # LangChain adapter with postcondition-aware PII redaction
+    # LangChain adapter — build async middleware for create_agent
     adapter = LangChainAdapter(guard, principal=principal)
 
-    def redact_callback(result, findings):
-        if hasattr(result, 'content') and isinstance(result.content, str):
-            result.content = redact_pii(result.content)
-        return result
+    @wrap_tool_call
+    async def edictum_governance(request, handler):
+        """Edictum governance middleware: pre-check → execute → post-check."""
+        from langchain_core.messages import ToolMessage
 
-    tools = [query_clinical_data, update_case_report, export_regulatory_document, search_medical_literature]
-    tool_node = ToolNode(
-        tools=tools,
-        wrap_tool_call=adapter.as_tool_wrapper(on_postcondition_warn=redact_callback),
-    )
+        pre_result = await adapter._pre_tool_call(request)
+        if pre_result is not None:
+            return pre_result
+        result = await handler(request)
+        post_result = await adapter._post_tool_call(request, result)
+        # If postcondition redacted the output, wrap it back into a ToolMessage
+        if not post_result.postconditions_passed and isinstance(post_result.result, str):
+            return ToolMessage(
+                content=post_result.result,
+                tool_call_id=request.tool_call["id"],
+            )
+        return post_result.result
 
-    llm = ChatOpenAI(model="gpt-4.1", temperature=0.3)
-    agent = create_react_agent(llm, tools=tool_node, prompt=SYSTEM_PROMPT)
+    llm = ChatOpenAI(model="gpt-4.1-mini", temperature=0)
+    agent = create_agent(llm, tools=ALL_TOOLS, middleware=[edictum_governance])
 
-    # Banner
-    print_banner("LangChain + LangGraph", principal, args.mode)
-    print_header(f"TASK: {task}")
+    print_banner("LangChain + LangGraph", args.mode, console=args.console)
 
-    # Run agent
-    result = agent.invoke({"messages": [("user", task)]})
+    # Get audit sink for result classification
+    sink = get_local_sink(guard)
 
-    # Token tracking — count ALL AI messages (including tool-calling ones)
-    total_prompt_tokens = 0
-    total_completion_tokens = 0
-    llm_calls = 0
+    # Run each scenario with a directive prompt
+    for i, (desc, tool_name, tool_args, expected) in enumerate(scenarios, 1):
+        print_scenario(i, len(scenarios), desc)
 
-    # Display results
-    for msg in result["messages"]:
-        # Track tokens from every AI message
-        if getattr(msg, 'type', None) == 'ai':
-            usage = getattr(msg, 'usage_metadata', None)
-            if usage:
-                llm_calls += 1
-                total_prompt_tokens += usage.get('input_tokens', 0)
-                total_completion_tokens += usage.get('output_tokens', 0)
+        args_str = ", ".join(
+            f'{k}="{v}"' if isinstance(v, str) else f'{k}={v}'
+            for k, v in tool_args.items()
+        )
+        prompt = (
+            f"Call the {tool_name} tool with these exact arguments: {args_str}. "
+            f"Do not call any other tools."
+        )
 
-        if hasattr(msg, 'tool_calls') and msg.tool_calls:
-            for tc in msg.tool_calls:
-                print(f"\n  Tool call: {tc['name']}({json.dumps(tc['args'], separators=(',', ':'))})")
-        elif hasattr(msg, 'content') and hasattr(msg, 'tool_call_id'):
-            # ToolMessage
-            if msg.content.startswith("DENIED:"):
-                print_governance("DENIED", msg.content[8:])
-            elif '[REDACTED]' in msg.content:
-                print_governance("WARNING", "PII detected — output redacted")
-                if len(msg.content) > 200:
-                    print_event("Result", f"{msg.content[:200]}...", "  ")
-                else:
-                    print_event("Result", msg.content, "  ")
+        mark_sink(sink)
+
+        try:
+            result = await agent.ainvoke({"messages": [("human", prompt)]})
+        except Exception as exc:
+            err = str(exc)
+            if "INVALID_CHAT_HISTORY" in err:
+                print_result("REDACTED", "Postcondition redacted output (tool result suppressed)")
             else:
-                print_governance("ALLOWED", "executed successfully")
-                if len(msg.content) > 200:
-                    print_event("Result", f"{msg.content[:200]}...", "  ")
-                else:
-                    print_event("Result", msg.content, "  ")
-        elif getattr(msg, 'type', None) == 'ai' and not getattr(msg, 'tool_calls', None) and msg.content:
-            print_header("AGENT RESPONSE")
-            print(f"  {msg.content[:500]}")
-            if len(msg.content) > 500:
-                print(f"  ... ({len(msg.content)} chars total)")
+                print_result("DENIED", err[:120])
+            continue
 
-    # Summaries
-    print_audit_summary(sink)
-    print_token_summary(total_prompt_tokens, total_completion_tokens, llm_calls)
+        # Use audit-based classification first, fallback to message parsing
+        action, detail = classify_result(sink, tool_name, expected)
+        if action:
+            print_result(action, detail)
+            continue
 
-    print("  The agent was non-deterministic. The governance was not.")
-    print("=" * 70)
-    teardown_otel()
+        # Fallback: parse result messages for governance decisions
+        for msg in result["messages"]:
+            if not (hasattr(msg, "content") and hasattr(msg, "tool_call_id")):
+                continue
+
+            content = str(msg.content)
+            if content.startswith("DENIED:"):
+                print_result("DENIED", content[7:].strip())
+            elif "[REDACTED]" in content:
+                print_result("REDACTED", "PII detected and redacted in output")
+            elif content.startswith("APPROVAL:") or "approval" in content.lower():
+                print_result("APPROVAL", content)
+            else:
+                print_result("ALLOWED", f"{tool_name} executed")
+
+    # Audit summary
+    if not args.console:
+        print_audit_summary(sink)
+    else:
+        print(f"\n{'=' * 60}")
+        print("  GOVERNANCE SUMMARY")
+        print(f"{'=' * 60}")
+        print("  (Audit data sent to edictum-console server)")
+        print()
+
+    # Cleanup
+    if args.console and hasattr(guard, "close"):
+        await guard.close()
 
 
 if __name__ == "__main__":

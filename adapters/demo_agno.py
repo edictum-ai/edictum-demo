@@ -3,127 +3,155 @@ Edictum Agno Adapter Demo
 ==========================
 
 Demonstrates Edictum governance using the Agno adapter with an Agno Agent.
-The agent uses GPT-4.1 for pharmacovigilance tasks while Edictum governs
-every tool call transparently via a wrap-around tool_hook.
+Exercises ALL contract types via directed tool calls: pre/post/session/sandbox
+contracts, deny/redact/warn/approve effects, RBAC, and observe mode.
 
 Usage:
     python adapters/demo_agno.py
     python adapters/demo_agno.py --mode observe
-    python adapters/demo_agno.py --role researcher
-    python adapters/demo_agno.py --role researcher --ticket CAPA-2025-042
+    python adapters/demo_agno.py --console
+    python adapters/demo_agno.py --quick --role admin
 """
 
 from __future__ import annotations
 
-from edictum import Edictum
-from edictum.adapters.agno import AgnoAdapter
-from agno.agent import Agent
-from agno.models.openai import OpenAIChat
-
+import asyncio
 import sys
 from pathlib import Path
-sys.path.insert(0, str(Path(__file__).parent))
 
-from shared import (  # noqa: E402
-    query_clinical_data,
-    update_case_report,
-    export_regulatory_document,
-    search_medical_literature,
-    redact_pii,
-    CollectingAuditSink,
-    CONTRACTS_PATH,
-    SYSTEM_PROMPT,
-    DEFAULT_TASK,
+sys.path.insert(0, str(Path(__file__).parent))
+from shared_v2 import (  # noqa: E402
+    get_weather,
+    search_web,
+    read_file,
+    send_email,
+    update_record,
+    delete_record,
+    SCENARIOS,
+    QUICK_SCENARIOS,
+    create_standalone_guard,
+    create_console_guard,
+    classify_result,
+    mark_sink,
     parse_args,
     make_principal,
     print_banner,
-    print_header,
-    print_event,
+    print_scenario,
+    print_result,
     print_audit_summary,
-    print_token_summary,
-    setup_otel,
-    teardown_otel,
+    get_local_sink,
 )
+
+from edictum.adapters.agno import AgnoAdapter  # noqa: E402
+from agno.agent import Agent  # noqa: E402
+from agno.models.openai import OpenAIChat  # noqa: E402
+
+
+# ─── Tool registry for lookup by name ────────────────────────────────────────
+
+TOOL_MAP = {
+    "get_weather": get_weather,
+    "search_web": search_web,
+    "read_file": read_file,
+    "send_email": send_email,
+    "update_record": update_record,
+    "delete_record": delete_record,
+}
+
+ALL_TOOLS = list(TOOL_MAP.values())
 
 
 # ─── Main ────────────────────────────────────────────────────────────────────
 
-def main():
+async def main():
     args = parse_args("Agno")
-    principal = make_principal(args.role, args.ticket)
-    task = args.task or DEFAULT_TASK
-    setup_otel()
+    principal = make_principal(args.role)
+    scenarios = QUICK_SCENARIOS if args.quick else SCENARIOS
 
-    # Audit sink
-    sink = CollectingAuditSink()
+    # Create governance guard
+    if args.console:
+        guard = await create_console_guard(
+            agent_id="edictum-agno-agent",
+            bundle_name="edictum-adapter-demos",
+        )
+    else:
+        guard = create_standalone_guard(mode=args.mode)
 
-    # Governance guard
-    guard = Edictum.from_yaml(
-        str(CONTRACTS_PATH),
-        mode="observe" if args.mode == "observe" else None,
-        audit_sink=sink,
-    )
-
-    # Agno adapter with postcondition-aware PII redaction
+    # Agno adapter — wrap-around hook intercepts every tool call
     adapter = AgnoAdapter(guard, principal=principal)
-
-    def redact_callback(result, findings):
-        if isinstance(result, str):
-            result = redact_pii(result)
-        return result
-
-    hook = adapter.as_tool_hook(on_postcondition_warn=redact_callback)
+    hook = adapter.as_tool_hook()
 
     # Create Agno agent — plain functions are auto-wrapped by Agno
     agent = Agent(
-        model=OpenAIChat(id="gpt-4.1"),
-        tools=[query_clinical_data, update_case_report, export_regulatory_document, search_medical_literature],
+        model=OpenAIChat(id="gpt-4.1-mini"),
+        tools=ALL_TOOLS,
         tool_hooks=[hook],
-        instructions=[SYSTEM_PROMPT],
+        instructions=[
+            "You are a helpful assistant. When asked to use a tool, "
+            "call it with the exact arguments provided. Do not call any other tools."
+        ],
     )
 
-    # Banner
-    print_banner("Agno", principal, args.mode)
-    print_header(f"TASK: {task}")
+    print_banner("Agno", args.mode, console=args.console)
 
-    # Run agent (Agno's agent.run() is sync)
-    response = agent.run(task)
+    # Get audit sink for result classification
+    sink = get_local_sink(guard)
 
-    # Display response
-    print_header("AGENT RESPONSE")
-    content = response.content if hasattr(response, "content") else str(response)
-    print(f"  {content[:500]}")
-    if len(content) > 500:
-        print(f"  ... ({len(content)} chars total)")
+    # Run each scenario with a directive prompt
+    for i, (desc, tool_name, tool_args, expected) in enumerate(scenarios, 1):
+        print_scenario(i, len(scenarios), desc)
 
-    # Token tracking — extract from response metrics if available
-    input_tokens = 0
-    output_tokens = 0
-    llm_calls = 0
+        args_str = ", ".join(
+            f'{k}="{v}"' if isinstance(v, str) else f"{k}={v}"
+            for k, v in tool_args.items()
+        )
+        prompt = (
+            f"Call the {tool_name} tool with these exact arguments: {args_str}. "
+            f"Do not call any other tools."
+        )
 
-    metrics = getattr(response, "metrics", None)
-    if metrics and isinstance(metrics, dict):
-        input_tokens = metrics.get("input_tokens", 0) or metrics.get("prompt_tokens", 0) or 0
-        output_tokens = metrics.get("output_tokens", 0) or metrics.get("completion_tokens", 0) or 0
-        llm_calls = metrics.get("llm_calls", 0) or 1
+        if sink and hasattr(sink, 'mark'):
+            mark_sink(sink)
 
-    # If metrics not on response directly, check messages
-    if input_tokens == 0 and hasattr(response, "messages"):
-        for msg in response.messages:
-            msg_metrics = getattr(msg, "metrics", None)
-            if msg_metrics and isinstance(msg_metrics, dict):
-                llm_calls += 1
-                input_tokens += msg_metrics.get("input_tokens", 0) or msg_metrics.get("prompt_tokens", 0) or 0
-                output_tokens += msg_metrics.get("output_tokens", 0) or msg_metrics.get("completion_tokens", 0) or 0
+        try:
+            response = agent.run(prompt)
+        except Exception as exc:
+            print_result("DENIED", str(exc))
+            continue
 
-    # Summaries
-    print_audit_summary(sink)
-    print_token_summary(input_tokens, output_tokens, llm_calls)
+        # Use audit-based classification first, fallback to output parsing
+        action, detail = classify_result(sink, tool_name, expected)
+        if action:
+            print_result(action, detail)
+            continue
 
-    print("  The agent was non-deterministic. The governance was not.")
-    print("=" * 70)
-    teardown_otel()
+        # Fallback: extract tool results from agent response
+        content = response.content if hasattr(response, "content") else str(response)
+
+        if "DENIED:" in content:
+            denied_msg = content.split("DENIED:", 1)[1].strip().split("\n")[0]
+            print_result("DENIED", denied_msg)
+        elif "[REDACTED]" in content:
+            print_result("REDACTED", "PII detected and redacted in output")
+        elif "approval" in content.lower():
+            print_result("APPROVAL", content[:80])
+        else:
+            print_result("ALLOWED", f"{tool_name} executed")
+
+    # Audit summary
+    if not args.console:
+        print_audit_summary(sink)
+    else:
+        print(f"\n{'=' * 60}")
+        print("  GOVERNANCE SUMMARY")
+        print(f"{'=' * 60}")
+        print("  (Audit data sent to edictum-console server)")
+        print()
+
+    # Cleanup
+    if args.console and hasattr(guard, "close"):
+        await guard.close()
 
 
 if __name__ == "__main__":
-    main()
+    asyncio.run(main())

@@ -130,7 +130,7 @@ def _configure_otlp(endpoint: str) -> str:
         "opentelemetry.exporter.otlp.proto.http._log_exporter",
         "opentelemetry.sdk.metrics._internal.export",
     ):
-        logging.getLogger(logger_name).setLevel(logging.CRITICAL)
+        logging.getLogger(logger_name).setLevel(logging.WARNING)
 
     return "otlp"
 

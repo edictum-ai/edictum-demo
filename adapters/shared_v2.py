@@ -136,11 +136,10 @@ QUICK_SCENARIOS = [s for s in SCENARIOS if s[3] != "approval"][:12]
 
 def create_standalone_guard(mode: str = "enforce") -> Edictum:
     """Create a standalone Edictum guard from local YAML contracts."""
-    sink = CollectingAuditSink()
     return Edictum.from_yaml(
         str(CONTRACTS_PATH),
         mode=mode if mode != "enforce" else None,
-        audit_sink=sink,
+        audit_sink=[],  # suppress stdout; guard.local_sink always available
     )
 
 
@@ -161,28 +160,27 @@ async def create_console_guard(agent_id: str, bundle_name: str = "edictum-adapte
     )
 
 
-# ─── CollectingAuditSink ─────────────────────────────────────────────────
+def get_local_sink(guard):
+    """Get the local CollectingAuditSink from a guard."""
+    return getattr(guard, 'local_sink', None)
 
-class CollectingAuditSink:
-    """In-memory audit sink that collects events for display."""
 
-    def __init__(self):
-        self.events = []
-        self._marker = 0  # index for scenario-level tracking
+# Module-level mark storage — one mark per sink instance
+_marks: dict[int, int] = {}
 
-    async def emit(self, event):
-        self.events.append(event)
 
-    def filter(self, action):
-        return [e for e in self.events if e.action == action]
+def mark_sink(sink):
+    """Take a mark on the sink for later use with classify_result/since_last_mark."""
+    if sink is not None:
+        _marks[id(sink)] = sink.mark()
 
-    def mark(self):
-        """Mark current position for scenario-level tracking."""
-        self._marker = len(self.events)
 
-    def since_mark(self):
-        """Return events since last mark."""
-        return self.events[self._marker:]
+def since_last_mark(sink):
+    """Return events since the last mark_sink() call."""
+    if sink is None:
+        return []
+    m = _marks.get(id(sink), 0)
+    return sink.since_mark(m)
 
 
 def classify_result(sink, tool_name: str, expected: str) -> tuple[str, str]:
@@ -190,10 +188,11 @@ def classify_result(sink, tool_name: str, expected: str) -> tuple[str, str]:
 
     Returns (action, detail) for print_result().
     """
-    if sink is None or not hasattr(sink, 'since_mark'):
+    if sink is None:
         return None, None
 
-    recent = sink.since_mark()
+    m = _marks.get(id(sink), 0)
+    recent = sink.since_mark(m)
     if not recent:
         return None, None
 

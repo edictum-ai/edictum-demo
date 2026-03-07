@@ -1,0 +1,162 @@
+apiVersion: edictum/v1
+kind: ContractBundle
+
+metadata:
+  name: edictum-adapter-demos
+  description: >
+    Comprehensive contracts exercising ALL edictum features for adapter demos.
+    Covers: pre/post/session/sandbox contracts, deny/redact/warn/approve effects,
+    principal-based access control, tool classification, observe mode, and HITL.
+
+defaults:
+  mode: enforce
+
+# ── Tool side-effect classifications ──────────────────────────────
+tools:
+  get_weather:
+    side_effect: pure
+    idempotent: true
+  search_web:
+    side_effect: read
+  read_file:
+    side_effect: read
+  send_email:
+    side_effect: irreversible
+  update_record:
+    side_effect: write
+  delete_record:
+    side_effect: irreversible
+
+contracts:
+  # ── PRE: Deny emails to known-bad domains ─────────────────────
+  - id: no-email-to-external
+    type: pre
+    tool: send_email
+    when:
+      args.to:
+        contains_any: ["@evil.com", "@attacker.com", "@malicious.com", "@external.org"]
+    then:
+      effect: deny
+      message: "Denied: emails to untrusted domain blocked. Recipient: '{args.to}'"
+      tags: [dlp, email]
+
+  # ── PRE: Block sensitive file paths ────────────────────────────
+  - id: no-sensitive-files
+    type: pre
+    tool: read_file
+    when:
+      args.path:
+        contains_any: ["/etc/passwd", "/etc/shadow", ".env", "secrets", "credentials"]
+    then:
+      effect: deny
+      message: "Denied: access to sensitive file '{args.path}'"
+      tags: [dlp, filesystem]
+
+  # ── PRE: Role-based access control ────────────────────────────
+  - id: delete-requires-admin
+    type: pre
+    tool: delete_record
+    when:
+      principal.role:
+        not_in: [admin, superadmin]
+    then:
+      effect: deny
+      message: "Delete operations require admin role. Your role: {principal.role}"
+      tags: [access-control, rbac]
+
+  # ── PRE: Require approval for irreversible updates ────────────
+  - id: update-requires-approval
+    type: pre
+    tool: update_record
+    when:
+      args.confirmed:
+        not_equals: true
+    then:
+      effect: approve
+      message: "Record update requires human approval: {args.record_id}"
+      tags: [hitl, change-control]
+      timeout: 30
+      timeout_effect: deny
+
+  # ── PRE: Observe-mode audit logging (never blocks) ────────────
+  - id: audit-all-emails
+    type: pre
+    mode: observe
+    tool: send_email
+    when:
+      args.to:
+        exists: true
+    then:
+      effect: deny
+      message: "Audit: email to '{args.to}' with subject '{args.subject}'"
+      tags: [audit, email, observe]
+
+  # ── POST: Detect and redact PII in outputs (pure/read tools) ──
+  - id: redact-pii-output
+    type: post
+    tool: "*"
+    when:
+      output.text:
+        matches_any:
+          - '\b\d{3}-\d{2}-\d{4}\b'                                 # SSN
+          - '\b[A-Za-z0-9._%+-]+@[A-Za-z0-9.-]+\.[A-Z|a-z]{2,}\b'  # Email
+          - '\b(\+1[\s.-]?)?\(?\d{3}\)?[\s.-]?\d{3}[\s.-]?\d{4}\b'  # US phone
+    then:
+      effect: redact
+      message: "PII detected in output — redacted"
+      tags: [pii, gdpr, hipaa]
+
+  # ── POST: Warn on error responses from read_file ───────────────
+  - id: detect-file-errors
+    type: post
+    tool: read_file
+    when:
+      output.text:
+        contains_any: ["Permission denied", "No such file", "Error:"]
+    then:
+      effect: warn
+      message: "File operation returned an error"
+      tags: [reliability]
+
+  # ── POST: Deny if output contains credential-like content ──────
+  - id: no-credentials-in-output
+    type: post
+    tool: "*"
+    when:
+      output.text:
+        matches_any:
+          - 'sk-[a-zA-Z0-9]{20,}'    # API key pattern
+          - 'ghp_[a-zA-Z0-9]{36}'     # GitHub PAT
+          - 'AKIA[0-9A-Z]{16}'        # AWS access key
+    then:
+      effect: deny
+      message: "Credential/secret detected in output — suppressed"
+      tags: [dlp, secrets]
+
+  # ── SANDBOX: Restrict read_file to safe directories ────────────
+  - id: safe-file-paths
+    type: sandbox
+    tool: read_file
+    within: ["/home/", "/tmp/", "/var/log/"]
+    message: "read_file is restricted to /home/, /tmp/, and /var/log/"
+
+  # ── SESSION: Per-tool rate limit ───────────────────────────────
+  - id: weather-rate-limit
+    type: session
+    limits:
+      max_calls_per_tool:
+        get_weather: 5
+    then:
+      effect: deny
+      message: "Rate limit: max 5 weather lookups per session"
+      tags: [rate-limit]
+
+  # ── SESSION: Global tool call limit ────────────────────────────
+  - id: session-call-limit
+    type: session
+    limits:
+      max_tool_calls: 25
+    then:
+      effect: deny
+      message: "Session limit: max 25 tool calls per session"
+      tags: [rate-limit, operational-safety]
