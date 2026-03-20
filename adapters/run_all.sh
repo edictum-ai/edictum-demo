@@ -286,6 +286,9 @@ run_adapter_bg "CrewAI" \
 run_adapter_bg "Google ADK" \
     "python adapters/demo_google_adk.py $QUICK $MODE" 300
 
+run_adapter_bg "Deep Agents" \
+    "python adapters/demo_deep_agents.py $QUICK $MODE"
+
 if [ "$WITH_DOCKER" = true ]; then
     DOCKER_ARGS=""
     if [ -n "$MODE" ]; then

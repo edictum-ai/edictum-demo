@@ -1197,7 +1197,7 @@ def _print_final_verdict(results: dict[str, dict[str, list[RunResult]]]):
     print(f"  {'':>25}{'─' * 20}{'─' * 20}{'─' * 20}")
 
     rows = [
-        ("Governance", "Probabilistic", "Shadow (logged)", "Deterministic"),
+        ("Governance", "Probabilistic", "Observe (logged)", "Deterministic"),
         ("Audit trail", "NONE", "FULL", "FULL"),
         ("Prompt overhead", f"~270 tok/call", "0", "0"),
         ("Violations", f"{violations_a}/{total_runs * 4}", f"{violations_b}/{total_runs * 4}", f"{violations_c}/{total_runs * 4}"),
@@ -1234,7 +1234,7 @@ async def main():
 
     mode_runners = {
         "A": ("Prompt Engineering (no Edictum)", run_mode_a),
-        "B": ("Edictum Observe (shadow mode)", run_mode_b),
+        "B": ("Edictum Observe", run_mode_b),
         "C": ("Edictum Enforce (production)", run_mode_c),
     }
 
