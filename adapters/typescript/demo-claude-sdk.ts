@@ -75,7 +75,9 @@ export async function main(): Promise<boolean> {
 
 // Run if executed directly
 const __filename = fileURLToPath(import.meta.url);
-if (process.argv[1] === __filename || process.argv[1]?.endsWith("/tsx") || process.argv[1]?.includes("demo-claude-sdk")) {
+const isDirectRun = process.argv[1] === __filename ||
+  process.argv[1]?.endsWith("/demo-claude-sdk.ts");
+if (isDirectRun) {
   main()
     .then((ok) => process.exit(ok ? 0 : 1))
     .catch((err) => {

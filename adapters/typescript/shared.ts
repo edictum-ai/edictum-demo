@@ -268,13 +268,13 @@ export function classifyResult(
 
   for (const e of recent) {
     if (e.action === AuditAction.CALL_DENIED) {
-      const reason = (e as Record<string, unknown>).reason as string ?? "";
-      const name = (e as Record<string, unknown>).decisionName as string ?? "";
+      const reason = e.reason ?? "";
+      const name = e.decisionName ?? "";
       const detail = name ? `${name}: ${reason}`.slice(0, 100) : reason.slice(0, 100);
       return { action: "DENIED", detail };
     }
     if (e.action === AuditAction.CALL_WOULD_DENY) {
-      const reason = (e as Record<string, unknown>).reason as string ?? "";
+      const reason = e.reason ?? "";
       return { action: "OBSERVE", detail: `would-deny: ${reason}`.slice(0, 100) };
     }
     if (e.action === AuditAction.CALL_APPROVAL_REQUESTED) {
@@ -282,7 +282,9 @@ export function classifyResult(
     }
   }
 
-  // Check postcondition results
+  // Check postcondition results. Only CALL_EXECUTED events carry
+  // postconditionsPassed (non-null), so iterating all events is safe —
+  // non-executed events have postconditionsPassed === null.
   for (const e of recent) {
     if (e.postconditionsPassed === false) {
       return { action: "REDACTED", detail: "PII detected and redacted in output" };
@@ -313,11 +315,11 @@ const CYAN = "\x1b[36m";
 const DIM = "\x1b[2m";
 const BOLD = "\x1b[1m";
 
-export function printBanner(adapterName: string): void {
+export function printBanner(adapterName: string, mode: "enforce" | "observe" = "enforce"): void {
   console.log("=".repeat(70));
   console.log(`  EDICTUM ${adapterName.toUpperCase()} DEMO (TypeScript)`);
   console.log("=".repeat(70));
-  console.log(`  Mode:    enforce`);
+  console.log(`  Mode:    ${mode}`);
   console.log(`  Source:  local YAML`);
   console.log(`  Version: @edictum/core ${VERSION}`);
   console.log();
@@ -399,8 +401,8 @@ export function printAuditSummary(sink: CollectingAuditSink): void {
     console.log(`  Contracts enforced:`);
     for (const e of events) {
       if (e.action === AuditAction.CALL_DENIED) {
-        const reason = ((e as Record<string, unknown>).reason as string ?? "").slice(0, 70);
-        const name = (e as Record<string, unknown>).decisionName as string ?? "";
+        const reason = (e.reason ?? "").slice(0, 70);
+        const name = e.decisionName ?? "";
         console.log(`    ${YELLOW}X ${name}: ${reason}${RESET}`);
       }
     }
