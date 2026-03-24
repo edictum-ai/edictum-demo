@@ -1,0 +1,24 @@
+{
+  "name": "edictum-ts-demos",
+  "version": "0.1.0",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "demo:vercel-ai": "tsx demo-vercel-ai.ts",
+    "demo:langchain": "tsx demo-langchain.ts",
+    "demo:openai-agents": "tsx demo-openai-agents.ts",
+    "demo:claude-sdk": "tsx demo-claude-sdk.ts",
+    "demo:all": "tsx run-all.ts"
+  },
+  "dependencies": {
+    "@edictum/core": "file:../../../edictum-ts/packages/core",
+    "@edictum/vercel-ai": "file:../../../edictum-ts/packages/vercel-ai",
+    "@edictum/langchain": "file:../../../edictum-ts/packages/langchain",
+    "@edictum/openai-agents": "file:../../../edictum-ts/packages/openai-agents",
+    "@edictum/claude-sdk": "file:../../../edictum-ts/packages/claude-sdk"
+  },
+  "devDependencies": {
+    "tsx": "^4.0.0",
+    "typescript": "^5.7.0"
+  }
+}
