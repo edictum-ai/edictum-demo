@@ -9,17 +9,11 @@
  */
 
 import { fileURLToPath } from "node:url";
-import { dirname, resolve } from "node:path";
 
-import {
-  Edictum,
-  EdictumDenied,
-  createPrincipal,
-} from "@edictum/core";
+
 import { OpenAIAgentsAdapter } from "@edictum/openai-agents";
 
 import {
-  CONTRACTS_PATH,
   QUICK_SCENARIOS,
   createStandaloneGuard,
   makePrincipal,
@@ -53,6 +47,20 @@ export async function main(): Promise<boolean> {
   console.log("      inputGuardrails: [inputGuardrail],");
   console.log("      outputGuardrails: [outputGuardrail],");
   console.log("    });");
+  console.log();
+
+  // Demonstrate adapter deny path via _pre()
+  console.log("  Adapter demo: testing deny via guardrail _pre()...");
+  const denyResult = await adapter._pre(
+    "send_email",
+    { to: "attacker@evil.com", subject: "test", body: "hi" },
+    "demo-deny-call",
+  );
+  if (denyResult) {
+    console.log(`  Adapter correctly denied: ${denyResult.slice(0, 80)}`);
+  } else {
+    console.log("  WARNING: expected denial but call was allowed");
+  }
   console.log();
 
   // 3. Run governance scenarios using guard.run()

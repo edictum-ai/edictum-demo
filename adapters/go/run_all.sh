@@ -24,6 +24,8 @@ echo ""
 
 for demo in "${DEMOS[@]}"; do
     echo "--- Running $demo ---"
+    # Uses go run (recompiles each time). For faster iteration, build first:
+    #   go build -o bin/ ./demo-langchaingo/ ./demo-adkgo/ ./demo-anthropic/
     if go run "./$demo/"; then
         echo "  [OK] $demo completed successfully"
         PASSED=$((PASSED + 1))

@@ -9,17 +9,11 @@
  */
 
 import { fileURLToPath } from "node:url";
-import { dirname, resolve } from "node:path";
 
-import {
-  Edictum,
-  EdictumDenied,
-  createPrincipal,
-} from "@edictum/core";
+
 import { LangChainAdapter } from "@edictum/langchain";
 
 import {
-  CONTRACTS_PATH,
   QUICK_SCENARIOS,
   createStandaloneGuard,
   makePrincipal,
@@ -52,6 +46,20 @@ export async function main(): Promise<boolean> {
   console.log("      handleToolErrors: true,");
   console.log("      toolCallMiddleware: adapter.asMiddleware(),");
   console.log("    });");
+  console.log();
+
+  // Demonstrate adapter deny path via _pre()
+  console.log("  Adapter demo: testing deny via middleware _pre()...");
+  const denyResult = await adapter._pre(
+    "send_email",
+    { to: "attacker@evil.com", subject: "test", body: "hi" },
+    "demo-deny-call",
+  );
+  if (denyResult) {
+    console.log(`  Adapter correctly denied: ${denyResult.slice(0, 80)}`);
+  } else {
+    console.log("  WARNING: expected denial but call was allowed");
+  }
   console.log();
 
   // 3. Run governance scenarios using guard.run()

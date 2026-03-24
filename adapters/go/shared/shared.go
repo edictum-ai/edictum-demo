@@ -162,7 +162,9 @@ var AllScenarios = []Scenario{
 	{"Weather #6 (DENIED: rate limit)", "get_weather", map[string]any{"city": "LA"}, "denied"},
 }
 
-// QuickScenarios returns the first 12 non-approval scenarios.
+// QuickScenarios returns all non-approval scenarios (skips scenarios that
+// would block waiting for HITL approval). The full set includes rate-limit
+// exhaustion scenarios that depend on ordering.
 func QuickScenarios() []Scenario {
 	var quick []Scenario
 	for _, s := range AllScenarios {
@@ -170,9 +172,6 @@ func QuickScenarios() []Scenario {
 			continue
 		}
 		quick = append(quick, s)
-		if len(quick) >= 12 {
-			break
-		}
 	}
 	return quick
 }
@@ -416,12 +415,12 @@ func RunScenarios(g *guard.Guard) {
 		action, detail := ClassifyResult(sink, mark, s.ToolName)
 
 		if action == "" {
-			// Fallback: classify from error
+			// Fallback: classify from error (audit path is primary)
 			if err != nil {
 				var denied *edictum.DeniedError
 				if errors.As(err, &denied) {
 					action = "DENIED"
-					detail = denied.Reason
+					detail = denied.Error() // includes decision source + name
 				} else {
 					action = "ERROR"
 					detail = err.Error()

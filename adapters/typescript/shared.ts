@@ -7,8 +7,6 @@
 
 import { fileURLToPath } from "node:url";
 import { dirname, resolve } from "node:path";
-import { randomUUID } from "node:crypto";
-
 import {
   Edictum,
   EdictumDenied,
@@ -228,10 +226,11 @@ export const SCENARIOS: Scenario[] = [
   },
 ];
 
-/** Quick subset: skip rate limit exhaustion and approval-blocking scenarios. */
+/** Quick subset: skip scenarios that would block waiting for HITL approval.
+ * Includes rate-limit exhaustion scenarios that depend on ordering. */
 export const QUICK_SCENARIOS: Scenario[] = SCENARIOS.filter(
   (s) => s.expected !== "approval",
-).slice(0, 12);
+);
 
 // ---------------------------------------------------------------------------
 // Guard creation

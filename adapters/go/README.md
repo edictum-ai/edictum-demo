@@ -17,7 +17,7 @@ Demonstrates runtime contract enforcement using the [edictum-go](https://github.
 
 ## Setup
 
-The `go.mod` uses a `replace` directive pointing to a local edictum-go checkout. Update the path if your layout differs:
+The `go.mod` uses a `replace` directive pointing to a local edictum-go checkout (assumes sibling repos). Update the path if your layout differs. When edictum-go is published, remove the `replace` directive and run `go mod tidy` to regenerate `go.sum`:
 
 ```
 replace github.com/edictum-ai/edictum-go => /path/to/your/edictum-go
