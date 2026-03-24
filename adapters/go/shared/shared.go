@@ -79,9 +79,8 @@ func ReadFile(args map[string]any) (any, error) {
 
 // SendEmail returns simulated email send result.
 func SendEmail(args map[string]any) (any, error) {
-	to, _ := args["to"].(string)
 	subject, _ := args["subject"].(string)
-	result := map[string]any{"status": "sent", "to": to, "subject": subject}
+	result := map[string]any{"status": "sent", "message_id": fmt.Sprintf("msg-%d", rand.IntN(100000)), "subject": subject}
 	b, _ := json.Marshal(result)
 	return string(b), nil
 }
@@ -246,9 +245,9 @@ func ClassifyResult(sink *audit.CollectingSink, mark int, toolName string) (acti
 		return "", ""
 	}
 
+	// Check for hard denials and approvals first
 	for _, e := range recent {
-		switch e.Action {
-		case audit.ActionCallDenied:
+		if e.Action == audit.ActionCallDenied {
 			reason := e.Reason
 			name := e.DecisionName
 			if name != "" {
@@ -262,15 +261,8 @@ func ClassifyResult(sink *audit.CollectingSink, mark int, toolName string) (acti
 				reason = reason[:100]
 			}
 			return "DENIED", reason
-
-		case audit.ActionCallWouldDeny:
-			d := fmt.Sprintf("would-deny: %s", e.Reason)
-			if len(d) > 100 {
-				d = d[:100]
-			}
-			return "OBSERVE", d
-
-		case audit.ActionCallApprovalRequested:
+		}
+		if e.Action == audit.ActionCallApprovalRequested {
 			return "APPROVAL", fmt.Sprintf("%s requires approval", toolName)
 		}
 	}
@@ -282,9 +274,21 @@ func ClassifyResult(sink *audit.CollectingSink, mark int, toolName string) (acti
 		}
 	}
 
+	// Check for allowed/executed (takes precedence over observe-mode audits)
 	for _, e := range recent {
 		if e.Action == audit.ActionCallAllowed || e.Action == audit.ActionCallExecuted {
 			return "ALLOWED", fmt.Sprintf("%s executed", toolName)
+		}
+	}
+
+	// Observe-mode: CALL_WOULD_DENY fired but no execution followed
+	for _, e := range recent {
+		if e.Action == audit.ActionCallWouldDeny {
+			d := fmt.Sprintf("would-deny: %s", e.Reason)
+			if len(d) > 100 {
+				d = d[:100]
+			}
+			return "OBSERVE", d
 		}
 	}
 

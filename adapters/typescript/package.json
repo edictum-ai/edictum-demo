@@ -11,11 +11,12 @@
     "demo:all": "tsx run-all.ts"
   },
   "dependencies": {
+    "@edictum/claude-sdk": "file:../../../edictum-ts/packages/claude-sdk",
     "@edictum/core": "file:../../../edictum-ts/packages/core",
-    "@edictum/vercel-ai": "file:../../../edictum-ts/packages/vercel-ai",
     "@edictum/langchain": "file:../../../edictum-ts/packages/langchain",
     "@edictum/openai-agents": "file:../../../edictum-ts/packages/openai-agents",
-    "@edictum/claude-sdk": "file:../../../edictum-ts/packages/claude-sdk"
+    "@edictum/vercel-ai": "file:../../../edictum-ts/packages/vercel-ai",
+    "js-yaml": "^4.1.1"
   },
   "devDependencies": {
     "tsx": "^4.0.0",

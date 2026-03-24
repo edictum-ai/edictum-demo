@@ -69,12 +69,15 @@ func main() {
 		fmt.Println("  WARNING: expected denial but call was allowed")
 	}
 
-	// Clear sink before scenario run. Note: any marks taken before Clear()
-	// become invalid (SinceMark would return MarkEvictedError).
-	g.LocalSink().Clear()
+	// Create a fresh guard for scenario run (adapter demo consumed session state)
+	g2, err := shared.CreateGuard(contractsPath, "analyst")
+	if err != nil {
+		fmt.Fprintf(os.Stderr, "Error creating scenario guard: %v\n", err)
+		os.Exit(1)
+	}
 	fmt.Println()
 	fmt.Println("  Now running full scenario suite via guard.Run()...")
 
 	// ── Run all scenarios ───────────────────────────────────────────
-	shared.RunScenarios(g)
+	shared.RunScenarios(g2)
 }

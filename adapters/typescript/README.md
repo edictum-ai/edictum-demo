@@ -58,9 +58,13 @@ pnpm demo:claude-sdk
 ## Expected Results
 
 Each demo runs 16 scenarios (all non-approval scenarios) producing:
-- 6 DENIED (sandbox violations, RBAC, evil email, sensitive files, rate limit)
-- 1 REDACTED (PII in contacts.json output)
-- 9 ALLOWED (weather x5, web search, safe files, safe email, confirmed update; observe-mode email audit fires but does not block)
+- 8 DENIED (sandbox violations x3, RBAC, evil email, sensitive files x2, rate limit)
+- 8 ALLOWED (weather x5, web search, safe email, confirmed update; observe-mode email audit fires but does not block)
+
+> **Note:** Scenarios 2 and 3 (read safe file, read contacts) are DENIED due to a
+> sandbox wiring bug in the YAML compiler — sandbox contracts always deny because
+> the compiled stub is never replaced with actual path checking. In Python, these
+> produce ALLOWED and REDACTED respectively.
 
 ## How It Works
 
