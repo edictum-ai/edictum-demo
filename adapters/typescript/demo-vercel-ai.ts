@@ -36,7 +36,8 @@ export async function main(): Promise<boolean> {
 
   // 2. Show adapter integration (how you would wire it into generateText)
   const adapter = new VercelAIAdapter(guard);
-  const callbacks = adapter.asCallbacks();
+  const callbacks = adapter.asCallbacks(); // shown for reference
+  void callbacks;
 
   console.log("  Adapter: VercelAIAdapter");
   console.log("  Integration: experimental_onToolCallStart / experimental_onToolCallFinish");

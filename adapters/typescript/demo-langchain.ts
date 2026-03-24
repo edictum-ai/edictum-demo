@@ -36,7 +36,8 @@ export async function main(): Promise<boolean> {
 
   // 2. Show adapter integration (how you would wire it into a ToolNode)
   const adapter = new LangChainAdapter(guard);
-  const middleware = adapter.asMiddleware();
+  const middleware = adapter.asMiddleware(); // shown for reference
+  void middleware;
 
   console.log("  Adapter: LangChainAdapter");
   console.log("  Integration: wrapToolCall middleware for ToolNode");

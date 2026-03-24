@@ -36,7 +36,8 @@ export async function main(): Promise<boolean> {
 
   // 2. Show adapter integration (how you would wire it into Claude Agent SDK)
   const adapter = new ClaudeAgentSDKAdapter(guard);
-  const hooks = adapter.toSdkHooks();
+  const hooks = adapter.toSdkHooks(); // shown for reference
+  void hooks;
 
   console.log("  Adapter: ClaudeAgentSDKAdapter");
   console.log("  Integration: PreToolUse / PostToolUse hooks");

@@ -45,7 +45,7 @@ chmod +x run_all.sh
 5. Classifies results from audit events (not LLM text parsing)
 6. Prints a governance summary
 
-## Expected results (12 quick scenarios)
+## Expected results (16 quick scenarios)
 
 | # | Scenario | Expected | Notes |
 |---|----------|----------|-------|
@@ -60,9 +60,13 @@ chmod +x run_all.sh
 | 9 | Search web | ALLOWED |  |
 | 10 | Delete without admin | DENIED | RBAC: delete-requires-admin |
 | 11 | Update confirmed | ALLOWED |  |
-| 12 | Weather #2 | ALLOWED |  |
+| 12 | Weather #2 | ALLOWED | Rate limit counting |
+| 13 | Weather #3 | ALLOWED | |
+| 14 | Weather #4 | ALLOWED | |
+| 15 | Weather #5 (last) | ALLOWED | |
+| 16 | Weather #6 | DENIED | Rate limit: max 5 per session |
 
-7 denied, 0 redacted, 5 allowed.
+8 denied, 0 redacted, 8 allowed.
 
 > **Known issue:** edictum-go has a sandbox wiring bug — YAML sandbox contracts
 > always deny because the compiled stub is never replaced with `sandbox.Check()`.

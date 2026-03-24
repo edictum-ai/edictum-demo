@@ -36,7 +36,8 @@ export async function main(): Promise<boolean> {
 
   // 2. Show adapter integration (how you would wire it into an Agent)
   const adapter = new OpenAIAgentsAdapter(guard);
-  const guardrails = adapter.asGuardrails();
+  const guardrails = adapter.asGuardrails(); // shown for reference
+  void guardrails;
 
   console.log("  Adapter: OpenAIAgentsAdapter");
   console.log("  Integration: inputGuardrail / outputGuardrail for Agent");

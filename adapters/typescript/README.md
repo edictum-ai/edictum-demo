@@ -9,7 +9,7 @@ Demonstrates runtime contract enforcement using `@edictum/core` with 4 framework
 | `demo-openai-agents.ts` | `@edictum/openai-agents` | `inputGuardrail` / `outputGuardrail` |
 | `demo-claude-sdk.ts` | `@edictum/claude-sdk` | `PreToolUse` / `PostToolUse` hooks |
 
-All demos share the same `contracts.yaml` (at `../contracts.yaml`) and exercise the same 12 governance scenarios: precondition denials, sandbox enforcement, RBAC, PII redaction, and more.
+All demos share the same `contracts.yaml` (at `../contracts.yaml`) and exercise 16 governance scenarios: precondition denials, sandbox enforcement, RBAC, PII redaction, rate limiting, and more.
 
 ## Prerequisites
 
@@ -57,11 +57,10 @@ pnpm demo:claude-sdk
 
 ## Expected Results
 
-Each demo runs 12 scenarios producing:
-- 5 DENIED (sandbox violations, RBAC, evil email, sensitive files)
+Each demo runs 16 scenarios (all non-approval scenarios) producing:
+- 6 DENIED (sandbox violations, RBAC, evil email, sensitive files, rate limit)
 - 1 REDACTED (PII in contacts.json output)
-- 1 OBSERVE (observe-mode email audit, counted as allowed)
-- 5 ALLOWED (weather, web search, safe files, safe email, confirmed update)
+- 9 ALLOWED (weather x5, web search, safe files, safe email, confirmed update; observe-mode email audit fires but does not block)
 
 ## How It Works
 

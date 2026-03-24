@@ -315,11 +315,11 @@ const CYAN = "\x1b[36m";
 const DIM = "\x1b[2m";
 const BOLD = "\x1b[1m";
 
-export function printBanner(adapterName: string, mode: "enforce" | "observe" = "enforce"): void {
+export function printBanner(adapterName: string): void {
   console.log("=".repeat(70));
   console.log(`  EDICTUM ${adapterName.toUpperCase()} DEMO (TypeScript)`);
   console.log("=".repeat(70));
-  console.log(`  Mode:    ${mode}`);
+  console.log(`  Mode:    enforce`);
   console.log(`  Source:  local YAML`);
   console.log(`  Version: @edictum/core ${VERSION}`);
   console.log();
@@ -366,13 +366,10 @@ export function printAuditSummary(sink: CollectingAuditSink): void {
   let piiRedacted = 0;
   let approvalReq = 0;
 
+  // Count by action — use CALL_EXECUTED (not CALL_ALLOWED) to avoid
+  // double-counting when both events fire for the same tool call.
   for (const e of events) {
-    if (
-      e.action === AuditAction.CALL_ALLOWED ||
-      e.action === AuditAction.CALL_EXECUTED
-    ) {
-      allowed++;
-    }
+    if (e.action === AuditAction.CALL_EXECUTED) allowed++;
     if (e.action === AuditAction.CALL_DENIED) denied++;
     if (e.action === AuditAction.CALL_WOULD_DENY) wouldDeny++;
     if (e.postconditionsPassed === false) piiRedacted++;
@@ -453,7 +450,7 @@ export async function runScenarios(
         continue;
       }
 
-      const output = await guard.run(
+      await guard.run(
         scenario.tool,
         scenario.args,
         async (args) => toolFn(args),
