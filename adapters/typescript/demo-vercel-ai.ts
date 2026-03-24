@@ -44,27 +44,20 @@ export async function main(): Promise<boolean> {
   const useLLM = isLLMMode() && checkLLMAvailable();
 
   if (useLLM) {
-    // ---------- LLM MODE: native Vercel AI SDK integration ----------
-    // The adapter's asCallbacks() hooks intercept tool calls inside generateText:
-    //   experimental_onToolCallStart -> precondition check (denies throw EdictumDenied)
-    //   experimental_onToolCallFinish -> postcondition check (redaction, audit)
-    console.log("  Mode: LLM (native Vercel AI adapter callbacks)");
+    // ---------- LLM MODE ----------
+    // NOTE: Native adapter.asCallbacks() integration with generateText has a
+    // known bug: AI SDK v6 passes toolCall.input but the adapter expects
+    // toolCall.args, so precondition checks see empty args and don't fire.
+    // Until edictum-ts is updated, LLM mode uses guard.run() like other demos.
+    console.log("  Mode: LLM (LLM decides tool call, guard.run() enforces)");
     console.log("  Model: gpt-4.1-mini (temperature=0)");
-    console.log("  Integration: generateText + adapter.asCallbacks()");
+    console.log("  Adapter: VercelAIAdapter (asCallbacks for generateText)");
+    console.log("  Note: native callback path blocked by input/args mismatch bug.");
+    console.log("  Using guard.run() to demonstrate governance pipeline.");
     console.log();
 
-    const callbacks = adapter.asCallbacks();
-    const { runLLMScenariosNative } = await import("./llm-runner.js");
-
-    const results = await runLLMScenariosNative(
-      callbacks as unknown as {
-        experimental_onToolCallStart: (event: Record<string, unknown>) => Promise<void>;
-        experimental_onToolCallFinish: (event: Record<string, unknown>) => Promise<void>;
-      },
-      guard.localSink,
-      QUICK_SCENARIOS,
-      "Vercel AI",
-    );
+    const { runLLMScenariosViaGuard } = await import("./llm-runner.js");
+    const results = await runLLMScenariosViaGuard(guard, QUICK_SCENARIOS, "Vercel AI");
 
     printAuditSummary(guard.localSink);
     return printResultsSummary("Vercel AI", results);

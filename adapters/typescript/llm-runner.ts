@@ -149,6 +149,7 @@ export async function runLLMScenariosViaGuard(
       });
 
       // Step 2: Extract the tool call from the LLM response
+      // AI SDK v6: steps[0].toolCalls[0] has { toolName, input } (not args)
       const toolCall = llmResult.steps?.[0]?.toolCalls?.[0];
       if (!toolCall) {
         printResult("WARNING", "LLM did not produce a tool call");
@@ -162,7 +163,9 @@ export async function runLLMScenariosViaGuard(
         continue;
       }
 
-      console.log(`  ${DIM}LLM chose: ${toolCall.toolName}(${JSON.stringify(toolCall.args).slice(0, 60)})${RESET}`);
+      // AI SDK v6 uses 'input' (MCP-aligned), not 'args'
+      const tcArgs = (toolCall as Record<string, unknown>).input as Record<string, unknown> ?? {};
+      console.log(`  ${DIM}LLM chose: ${toolCall.toolName}(${JSON.stringify(tcArgs).slice(0, 60)})${RESET}`);
 
       // Step 3: Run through governance via guard.run()
       const toolFn = TOOL_MAP[toolCall.toolName];
@@ -180,7 +183,7 @@ export async function runLLMScenariosViaGuard(
 
       await guard.run(
         toolCall.toolName,
-        toolCall.args as Record<string, unknown>,
+        tcArgs as Record<string, unknown>,
         async (args) => toolFn(args),
       );
 
