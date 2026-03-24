@@ -49,7 +49,10 @@ func SearchWeb(args map[string]any) (any, error) {
 			map[string]any{"title": fmt.Sprintf("Result 2 for '%s'", query), "url": "https://example.com/2"},
 		},
 	}
-	b, _ := json.Marshal(results)
+	b, err := json.Marshal(results)
+	if err != nil {
+		return nil, fmt.Errorf("search_web marshal: %w", err)
+	}
 	return string(b), nil
 }
 
@@ -71,7 +74,10 @@ func ReadFile(args map[string]any) (any, error) {
 				map[string]any{"name": "John Smith", "email": "john@company.com", "phone": "(212) 555-9876"},
 			},
 		}
-		b, _ := json.Marshal(contacts)
+		b, err := json.Marshal(contacts)
+		if err != nil {
+			return nil, fmt.Errorf("read_file marshal: %w", err)
+		}
 		return string(b), nil
 	}
 	return fmt.Sprintf("Contents of %s: [simulated file content, no sensitive data]", path), nil
@@ -81,7 +87,10 @@ func ReadFile(args map[string]any) (any, error) {
 func SendEmail(args map[string]any) (any, error) {
 	subject, _ := args["subject"].(string)
 	result := map[string]any{"status": "sent", "message_id": fmt.Sprintf("msg-%d", rand.IntN(100000)), "subject": subject}
-	b, _ := json.Marshal(result)
+	b, err := json.Marshal(result)
+	if err != nil {
+		return nil, fmt.Errorf("send_email marshal: %w", err)
+	}
 	return string(b), nil
 }
 
@@ -90,7 +99,10 @@ func UpdateRecord(args map[string]any) (any, error) {
 	recordID, _ := args["record_id"].(string)
 	data, _ := args["data"].(string)
 	result := map[string]any{"status": "updated", "record_id": recordID, "data": data}
-	b, _ := json.Marshal(result)
+	b, err := json.Marshal(result)
+	if err != nil {
+		return nil, fmt.Errorf("update_record marshal: %w", err)
+	}
 	return string(b), nil
 }
 
@@ -98,7 +110,10 @@ func UpdateRecord(args map[string]any) (any, error) {
 func DeleteRecord(args map[string]any) (any, error) {
 	recordID, _ := args["record_id"].(string)
 	result := map[string]any{"status": "deleted", "record_id": recordID}
-	b, _ := json.Marshal(result)
+	b, err := json.Marshal(result)
+	if err != nil {
+		return nil, fmt.Errorf("delete_record marshal: %w", err)
+	}
 	return string(b), nil
 }
 
