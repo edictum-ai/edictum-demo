@@ -26,7 +26,7 @@ replace github.com/edictum-ai/edictum-go => /path/to/your/edictum-go
 ## Running
 
 ```bash
-# Run a single demo
+# Run a single demo (direct mode — no LLM needed)
 go run ./demo-langchaingo/
 go run ./demo-adkgo/
 go run ./demo-anthropic/
@@ -35,6 +35,23 @@ go run ./demo-anthropic/
 chmod +x run_all.sh
 ./run_all.sh
 ```
+
+### LLM mode
+
+With `--llm`, each scenario sends a directive prompt to OpenAI (`gpt-4.1-mini`), the LLM generates a tool call, and that tool call goes through the Edictum governance pipeline. This demonstrates the full end-to-end flow: LLM -> adapter -> governance -> tool -> result.
+
+Requires `OPENAI_API_KEY` set in the environment or in `../../.env`.
+
+```bash
+# Single demo with LLM
+go run ./demo-langchaingo/ --llm
+
+# All demos with LLM
+./run_all.sh --llm
+LLM=1 ./run_all.sh
+```
+
+Without `--llm`, demos call `guard.Run()` directly (no API key needed).
 
 ## What each demo does
 

@@ -4,8 +4,9 @@
  * Demonstrates how to integrate edictum with LangChain.js using the
  * wrapToolCall middleware pattern for ToolNode.
  *
- * The adapter setup is shown for reference, but since we don't invoke a real
- * LLM here, governance testing uses guard.run() directly.
+ * Modes:
+ *   Default:  governance testing via guard.run() (no API key needed)
+ *   --llm:    LLM decides tool call -> guard.run() enforces governance
  */
 
 import { fileURLToPath } from "node:url";
@@ -21,6 +22,8 @@ import {
   printAuditSummary,
   printResultsSummary,
   runScenarios,
+  isLLMMode,
+  checkLLMAvailable,
 } from "./shared.js";
 
 // ---------------------------------------------------------------------------
@@ -39,36 +42,55 @@ export async function main(): Promise<boolean> {
   const middleware = adapter.asMiddleware(); // shown for reference
   void middleware;
 
-  console.log("  Adapter: LangChainAdapter");
-  console.log("  Integration: wrapToolCall middleware for ToolNode");
-  console.log("  Usage:");
-  console.log("    const adapter = new LangChainAdapter(guard);");
-  console.log("    const toolNode = new ToolNode(tools, {");
-  console.log("      handleToolErrors: true,");
-  console.log("      toolCallMiddleware: adapter.asMiddleware(),");
-  console.log("    });");
-  console.log();
+  // 3. Determine mode
+  const useLLM = isLLMMode() && checkLLMAvailable();
 
-  // Demonstrate adapter deny path via _pre()
-  console.log("  Adapter demo: testing deny via middleware _pre()...");
-  const denyResult = await adapter._pre(
-    "send_email",
-    { to: "attacker@evil.com", subject: "test", body: "hi" },
-    "demo-deny-call",
-  );
-  if (denyResult) {
-    console.log(`  Adapter correctly denied: ${denyResult.slice(0, 80)}`);
+  if (useLLM) {
+    // ---------- LLM MODE: LLM chooses tool -> guard.run() enforces ----------
+    console.log("  Mode: LLM (LLM decides tool call, guard.run() enforces)");
+    console.log("  Model: gpt-4.1-mini (temperature=0)");
+    console.log("  Adapter: LangChainAdapter (wrapToolCall middleware)");
+    console.log("  In a real app, the middleware wraps ToolNode automatically.");
+    console.log("  Here we use guard.run() to demonstrate the governance pipeline.");
+    console.log();
+
+    const { runLLMScenariosViaGuard } = await import("./llm-runner.js");
+    const results = await runLLMScenariosViaGuard(guard, QUICK_SCENARIOS, "LangChain");
+
+    printAuditSummary(guard.localSink);
+    return printResultsSummary("LangChain", results);
   } else {
-    console.log("  WARNING: expected denial but call was allowed");
+    // ---------- DIRECT MODE: guard.run() (no API key needed) ----------
+    console.log("  Adapter: LangChainAdapter");
+    console.log("  Integration: wrapToolCall middleware for ToolNode");
+    console.log("  Usage:");
+    console.log("    const adapter = new LangChainAdapter(guard);");
+    console.log("    const toolNode = new ToolNode(tools, {");
+    console.log("      handleToolErrors: true,");
+    console.log("      toolCallMiddleware: adapter.asMiddleware(),");
+    console.log("    });");
+    console.log();
+
+    // Demonstrate adapter deny path via _pre()
+    console.log("  Adapter demo: testing deny via middleware _pre()...");
+    const denyResult = await adapter._pre(
+      "send_email",
+      { to: "attacker@evil.com", subject: "test", body: "hi" },
+      "demo-deny-call",
+    );
+    if (denyResult) {
+      console.log(`  Adapter correctly denied: ${denyResult.slice(0, 80)}`);
+    } else {
+      console.log("  WARNING: expected denial but call was allowed");
+    }
+    console.log();
+
+    // Run governance scenarios using guard.run()
+    const results = await runScenarios(guard, QUICK_SCENARIOS, "LangChain");
+
+    printAuditSummary(guard.localSink);
+    return printResultsSummary("LangChain", results);
   }
-  console.log();
-
-  // 3. Run governance scenarios using guard.run()
-  const results = await runScenarios(guard, QUICK_SCENARIOS, "LangChain");
-
-  // 4. Print summary
-  printAuditSummary(guard.localSink);
-  return printResultsSummary("LangChain", results);
 }
 
 // Run if executed directly

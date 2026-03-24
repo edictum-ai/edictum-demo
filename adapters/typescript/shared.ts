@@ -557,6 +557,36 @@ function normalizeAction(action: string): string {
 }
 
 // ---------------------------------------------------------------------------
+// CLI flag helpers
+// ---------------------------------------------------------------------------
+
+/** Returns true if --llm was passed on the command line or OPENAI_API_KEY is set. */
+export function isLLMMode(): boolean {
+  return process.argv.includes("--llm");
+}
+
+/** Check if LLM mode is available (has API key). Loads .env from repo root. Prints warning if not. */
+export function checkLLMAvailable(): boolean {
+  // Load .env eagerly so the key is available before llm-runner.ts is imported
+  try {
+    const { config } = _require("dotenv") as { config: (opts: { path: string }) => void };
+    config({ path: resolve(__dirname, "../../.env") });
+  } catch {
+    // dotenv not installed yet — rely on environment variable
+  }
+  const key = process.env.OPENAI_API_KEY;
+  if (typeof key === "string" && key.length > 0) {
+    return true;
+  }
+  console.log(
+    `  ${"\x1b[33m"}WARNING: --llm flag set but OPENAI_API_KEY not found.${"\x1b[0m"}`,
+  );
+  console.log("  Set OPENAI_API_KEY in environment or in ../../.env");
+  console.log("  Falling back to direct guard.run() mode.\n");
+  return false;
+}
+
+// ---------------------------------------------------------------------------
 // Summary printer
 // ---------------------------------------------------------------------------
 

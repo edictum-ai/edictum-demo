@@ -15,6 +15,7 @@ import (
 )
 
 func main() {
+	shared.LoadEnv()
 	contractsPath := shared.ContractsPath()
 
 	g, err := shared.CreateGuard(contractsPath, "analyst")
@@ -90,5 +91,10 @@ func main() {
 	fmt.Println("  Now running full scenario suite via guard.Run()...")
 
 	// ── Run all scenarios ───────────────────────────────────────────
-	shared.RunScenarios(g2)
+	if shared.IsLLMMode() {
+		fmt.Println("  Running scenarios with LLM-driven tool calls...")
+		shared.RunLLMScenarios(g2)
+	} else {
+		shared.RunScenarios(g2)
+	}
 }

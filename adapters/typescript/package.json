@@ -8,15 +8,24 @@
     "demo:langchain": "tsx demo-langchain.ts",
     "demo:openai-agents": "tsx demo-openai-agents.ts",
     "demo:claude-sdk": "tsx demo-claude-sdk.ts",
-    "demo:all": "tsx run-all.ts"
+    "demo:all": "tsx run-all.ts",
+    "demo:vercel-ai:llm": "tsx demo-vercel-ai.ts --llm",
+    "demo:langchain:llm": "tsx demo-langchain.ts --llm",
+    "demo:openai-agents:llm": "tsx demo-openai-agents.ts --llm",
+    "demo:claude-sdk:llm": "tsx demo-claude-sdk.ts --llm",
+    "demo:all:llm": "tsx run-all.ts --llm"
   },
   "dependencies": {
+    "@ai-sdk/openai": "^3.0.0",
     "@edictum/claude-sdk": "file:../../../edictum-ts/packages/claude-sdk",
     "@edictum/core": "file:../../../edictum-ts/packages/core",
     "@edictum/langchain": "file:../../../edictum-ts/packages/langchain",
     "@edictum/openai-agents": "file:../../../edictum-ts/packages/openai-agents",
     "@edictum/vercel-ai": "file:../../../edictum-ts/packages/vercel-ai",
-    "js-yaml": "^4.1.1"
+    "ai": "^6.0.0",
+    "dotenv": "^16.0.0",
+    "js-yaml": "^4.1.1",
+    "zod": "^3.23.0"
   },
   "devDependencies": {
     "tsx": "^4.0.0",

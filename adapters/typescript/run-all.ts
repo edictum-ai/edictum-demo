@@ -1,13 +1,14 @@
 /**
  * Run all Edictum TypeScript adapter demos sequentially and validate results.
+ *
+ * Passes --llm flag through to each demo's main() when present.
  */
-
-import { fileURLToPath } from "node:url";
 
 import { main as vercelAI } from "./demo-vercel-ai.js";
 import { main as langchain } from "./demo-langchain.js";
 import { main as openaiAgents } from "./demo-openai-agents.js";
 import { main as claudeSdk } from "./demo-claude-sdk.js";
+import { isLLMMode } from "./shared.js";
 
 // ---------------------------------------------------------------------------
 // ANSI
@@ -17,6 +18,7 @@ const RESET = "\x1b[0m";
 const GREEN = "\x1b[32m";
 const RED = "\x1b[31m";
 const BOLD = "\x1b[1m";
+const CYAN = "\x1b[36m";
 
 // ---------------------------------------------------------------------------
 // Runner
@@ -35,10 +37,15 @@ const DEMOS: DemoEntry[] = [
 ];
 
 async function runAll(): Promise<void> {
+  const llmMode = isLLMMode();
+
   console.log();
   console.log(`${BOLD}${"#".repeat(70)}${RESET}`);
   console.log(`${BOLD}  EDICTUM TypeScript ADAPTER DEMOS${RESET}`);
   console.log(`${BOLD}  Running ${DEMOS.length} adapters...${RESET}`);
+  if (llmMode) {
+    console.log(`  ${CYAN}LLM mode enabled (--llm)${RESET}`);
+  }
   console.log(`${BOLD}${"#".repeat(70)}${RESET}`);
   console.log();
 

@@ -42,6 +42,8 @@ All demos share the same `contracts.yaml` (at `../contracts.yaml`) and exercise 
 
 ## Run
 
+### Direct mode (no API key needed)
+
 Run all 4 adapter demos:
 ```bash
 pnpm demo:all
@@ -55,6 +57,36 @@ pnpm demo:openai-agents
 pnpm demo:claude-sdk
 ```
 
+### LLM mode (requires OpenAI API key)
+
+LLM mode sends real prompts to `gpt-4.1-mini` so the LLM decides which tool to call, then governance intercepts the call. This demonstrates the full end-to-end flow: **LLM -> adapter -> governance -> tool -> result**.
+
+Set your API key in `../../.env` or as an environment variable:
+```bash
+export OPENAI_API_KEY=sk-...
+```
+
+Run all demos with LLM integration:
+```bash
+pnpm demo:all:llm
+```
+
+Run individual adapters with LLM:
+```bash
+pnpm demo:vercel-ai:llm
+pnpm demo:langchain:llm
+pnpm demo:openai-agents:llm
+pnpm demo:claude-sdk:llm
+```
+
+#### How LLM mode works
+
+- **Vercel AI demo** (native integration): Uses `generateText()` with `adapter.asCallbacks()` spread into the options. The adapter's `experimental_onToolCallStart` fires the precondition check, and `experimental_onToolCallFinish` fires the postcondition check. Denials throw `EdictumDenied` which aborts the tool execution.
+
+- **LangChain / OpenAI Agents / Claude SDK demos** (guard.run integration): The LLM chooses which tool to call via `generateText()`, then the tool call is passed through `guard.run()` for governance enforcement. This proves the flow works end-to-end without requiring each framework's full SDK.
+
+If `OPENAI_API_KEY` is not set when `--llm` is passed, the demos print a warning and fall back to direct mode.
+
 ## Expected Results
 
 Each demo runs 16 scenarios (all non-approval scenarios) producing:
@@ -62,7 +94,7 @@ Each demo runs 16 scenarios (all non-approval scenarios) producing:
 - 8 ALLOWED (weather x5, web search, safe email, confirmed update; observe-mode email audit fires but does not block)
 
 > **Note:** Scenarios 2 and 3 (read safe file, read contacts) are DENIED due to a
-> sandbox wiring bug in the YAML compiler — sandbox contracts always deny because
+> sandbox wiring bug in the YAML compiler -- sandbox contracts always deny because
 > the compiled stub is never replaced with actual path checking. In Python, these
 > produce ALLOWED and REDACTED respectively.
 
@@ -71,6 +103,6 @@ Each demo runs 16 scenarios (all non-approval scenarios) producing:
 Each demo:
 1. Creates an `Edictum` guard from `contracts.yaml`
 2. Shows the adapter setup code (how you would integrate with the real framework)
-3. Runs governance scenarios using `guard.run()` (framework-agnostic pipeline test)
+3. Runs governance scenarios (via `guard.run()` in direct mode, or via LLM in `--llm` mode)
 4. Classifies results from audit events
 5. Prints a governance summary with pass/fail validation

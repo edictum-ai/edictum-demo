@@ -3,6 +3,7 @@
 package shared
 
 import (
+	"bufio"
 	"context"
 	"encoding/json"
 	"errors"
@@ -462,6 +463,146 @@ func RunScenarios(g *guard.Guard) {
 		}
 
 		// Check expected vs actual
+		got := strings.ToLower(action)
+		want := s.Expected
+		if got == want || (got == "observe" && want == "allowed") {
+			passed++
+		} else {
+			failed++
+			fmt.Printf("  %s!! Expected %s, got %s%s\n", colorYellow, want, got, colorReset)
+		}
+	}
+
+	PrintSummary(sink)
+
+	fmt.Printf("  Results: %s%d passed%s", colorGreen, passed, colorReset)
+	if failed > 0 {
+		fmt.Printf(", %s%d unexpected%s", colorYellow, failed, colorReset)
+	}
+	fmt.Printf(" (out of %d scenarios)\n\n", len(scenarios))
+}
+
+// ── LLM mode helpers ────────────────────────────────────────────────────
+
+// IsLLMMode returns true if --llm was passed on the command line.
+func IsLLMMode() bool {
+	for _, arg := range os.Args[1:] {
+		if arg == "--llm" {
+			return true
+		}
+	}
+	return false
+}
+
+// LoadEnv reads a .env file and sets environment variables for keys that
+// are not already set. It looks for ../../.env relative to contracts.yaml.
+// Skips comments (#) and empty lines. Parses simple KEY=VALUE lines.
+func LoadEnv() {
+	contractsDir := filepath.Dir(ContractsPath())
+	envPath := filepath.Join(contractsDir, "..", ".env")
+	abs, err := filepath.Abs(envPath)
+	if err != nil {
+		return
+	}
+
+	f, err := os.Open(abs)
+	if err != nil {
+		return // .env not found — not an error
+	}
+	defer f.Close()
+
+	scanner := bufio.NewScanner(f)
+	for scanner.Scan() {
+		line := strings.TrimSpace(scanner.Text())
+		if line == "" || strings.HasPrefix(line, "#") {
+			continue
+		}
+		idx := strings.IndexByte(line, '=')
+		if idx < 1 {
+			continue
+		}
+		key := strings.TrimSpace(line[:idx])
+		val := strings.TrimSpace(line[idx+1:])
+		// Strip surrounding quotes
+		if len(val) >= 2 && ((val[0] == '"' && val[len(val)-1] == '"') || (val[0] == '\'' && val[len(val)-1] == '\'')) {
+			val = val[1 : len(val)-1]
+		}
+		// Don't override existing env vars
+		if os.Getenv(key) == "" {
+			os.Setenv(key, val)
+		}
+	}
+}
+
+// RunLLMScenarios runs the quick scenario set with LLM-driven tool calls.
+// For each scenario, it sends a directive prompt to the LLM, takes the
+// tool call decision, and passes it through guard.Run() with mock tools.
+func RunLLMScenarios(g *guard.Guard) {
+	scenarios := QuickScenarios()
+	ctx := context.Background()
+	sink := g.LocalSink()
+
+	fmt.Println()
+	fmt.Printf("  %sLLM mode: using %s for tool call decisions%s\n", colorCyan, "gpt-4.1-mini", colorReset)
+	fmt.Println()
+
+	passed, failed := 0, 0
+
+	for i, s := range scenarios {
+		PrintScenario(i+1, len(scenarios), s.Description)
+
+		// Build directive prompt and call LLM
+		prompt := BuildDirectivePrompt(s.ToolName, s.Args)
+		fmt.Printf("  %sPrompt: %s%s\n", colorGray, prompt, colorReset)
+
+		tc, err := CallLLM(ctx, prompt)
+		if err != nil {
+			fmt.Printf("  %sLLM error: %v%s\n", colorRed, err, colorReset)
+			failed++
+			continue
+		}
+
+		if tc == nil {
+			fmt.Printf("  %sLLM did not produce a tool call%s\n", colorYellow, colorReset)
+			failed++
+			continue
+		}
+
+		fmt.Printf("  %sLLM chose: %s(%v)%s\n", colorGray, tc.ToolName, tc.Args, colorReset)
+
+		// Run through governance pipeline
+		mark := sink.Mark()
+
+		result, err := g.Run(ctx, tc.ToolName, tc.Args, ToolCallable(tc.ToolName))
+
+		action, detail := ClassifyResult(sink, mark, tc.ToolName)
+
+		if action == "" {
+			if err != nil {
+				var denied *edictum.DeniedError
+				if errors.As(err, &denied) {
+					action = "DENIED"
+					detail = denied.Error()
+				} else {
+					action = "ERROR"
+					detail = err.Error()
+				}
+			} else {
+				action = "ALLOWED"
+				detail = fmt.Sprintf("%s executed", tc.ToolName)
+			}
+		}
+
+		PrintResult(action, detail)
+
+		if action == "REDACTED" && result != nil {
+			resultStr := fmt.Sprintf("%v", result)
+			if len(resultStr) > 120 {
+				resultStr = resultStr[:120] + "..."
+			}
+			fmt.Printf("  %sRedacted output: %s%s\n", colorGray, resultStr, colorReset)
+		}
+
 		got := strings.ToLower(action)
 		want := s.Expected
 		if got == want || (got == "observe" && want == "allowed") {
