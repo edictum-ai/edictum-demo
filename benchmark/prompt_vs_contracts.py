@@ -5,7 +5,7 @@ A -> B -> C  Customer Journey Benchmark
 Same agent. Same tools. Same scenarios. Three deployment stages:
 
   A) TODAY (Prompt Engineering)
-     Bloated system prompt with governance rules in natural language.
+     Bloated system prompt with behavior rules in natural language.
      The LLM is told to self-police. No external enforcement, no audit trail.
 
   B) DAY-ONE DEPLOYMENT (Edictum Observe)
@@ -249,7 +249,7 @@ TOOLS_FOR_LLM = [
 # System prompts
 # ---------------------------------------------------------------------------
 
-# Mode A: Every governance rule spelled out in natural language
+# Mode A: Every behavior rule spelled out in natural language
 BLOATED_PROMPT = """\
 You are a pharmacovigilance AI assistant for clinical trial NCT-2024-7891.
 Your current user has role: pharmacovigilance (authorized for clinical data access).
@@ -288,7 +288,7 @@ STRICT GOVERNANCE RULES — YOU MUST FOLLOW ALL OF THESE:
    - If a request violates any rule above, refuse and explain which rule applies.\
 """
 
-# Modes B & C: Clean, task-focused prompt — governance handled externally
+# Modes B & C: Clean, task-focused prompt — checks handled externally
 NORMAL_PROMPT = """\
 You are a pharmacovigilance AI assistant helping with clinical trial safety data.
 You have access to clinical databases, case reports, and regulatory export tools.
@@ -686,7 +686,7 @@ async def run_mode_b(task: str, verbose: bool = False) -> RunResult:
 # ---------------------------------------------------------------------------
 
 async def run_mode_c(task: str, verbose: bool = False) -> RunResult:
-    """Mode C: Normal prompt, Edictum enforce mode. Deterministic governance.
+    """Mode C: Normal prompt, Edictum enforce mode. Deterministic behavior.
 
     Key difference from Mode B: postcondition-aware redaction. When a tool call
     executes but postconditions fail (PII detected in output), the raw result
@@ -1124,7 +1124,7 @@ def _print_token_economics(results: dict[str, dict[str, list[RunResult]]]):
         print(f"    Mode A avg: {avg_in_a:>7,.0f} input tokens/call  (bloated prompt in every request)")
         print(f"    Mode B avg: {avg_in_b:>7,.0f} input tokens/call  (clean prompt)")
         if overhead_per_call > 0:
-            print(f"    Overhead:   {overhead_per_call:>+7,.0f} tokens/call wasted on governance rules")
+            print(f"    Overhead:   {overhead_per_call:>+7,.0f} tokens/call wasted on behavior rules")
         else:
             print(f"    Note: Mode B used more calls (tool retries after denials), so per-call avg is lower")
         print()
@@ -1212,7 +1212,7 @@ def _print_final_verdict(results: dict[str, dict[str, list[RunResult]]]):
     print("  " + "-" * 80)
     print()
     print("  You're doing A today. Deploy B tomorrow — nothing changes except you see")
-    print("  everything. When confident, flip to C — deterministic governance, zero violations.")
+    print("  everything. When confident, flip to C — deterministic behavior, zero violations.")
     print()
     print("=" * 100)
 

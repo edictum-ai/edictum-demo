@@ -1,6 +1,6 @@
 # Framework Adapters
 
-Same governance rules, 8 different agent frameworks. Proves Edictum is framework-agnostic.
+Same behavior rules, 8 different agent frameworks. Proves Edictum is framework-agnostic.
 
 All demos use shared mock tools and rules (`shared_v2.py`, `rules.yaml`) that exercise
 all edictum features: pre/post/session/sandbox rules, deny/redact/warn/approve effects,
@@ -113,7 +113,7 @@ Requires `EDICTUM_API_KEY` in `.env` and a running console. Admin credentials de
 
 | Check | Description |
 |-------|-------------|
-| Baseline governance | V1 rules deny email to evil.com |
+| Baseline checks | V1 rules deny email to evil.com |
 | SSE reload detected | `policy_version` changes after deploying V2 |
 | Behavior changed | V2 (email rule removed) allows evil email |
 | Second reload | `policy_version` changes again after re-deploying V1 |
@@ -125,7 +125,7 @@ hot-reload within the timeout window.
 
 ## Integration Test
 
-Run all adapters and validate governance results in one command:
+Run all adapters and validate check results in one command:
 
 ```bash
 # Quick standalone test (~3 min)
@@ -167,7 +167,7 @@ EDICTUM_REPO=/other/path/to/edictum ./adapters/run_all.sh --branch
 
 | Mode | Checks |
 |------|--------|
-| Standalone | Exact governance counts: 5D 1R 1O 5A (±1 for LLM flakiness) |
+| Standalone | Exact check counts: 5D 1R 1O 5A (±1 for LLM flakiness) |
 | Console | If #70 (TeeAuditSink) is fixed: validates counts. If not: flags `#70` and skips |
 | Benchmark | Runs `benchmark_adapters.py`, reports core overhead per tool call |
 
@@ -178,7 +178,7 @@ implemented. If all results show ALLOWED with 0 denials, it reports:
 
 ```
   #70  — no local audit in console mode (all results show ALLOWED)
-         governance runs server-side but classify_result() can't see events
+         checks run server-side but classify_result() can't see events
 ```
 
 Once #70 ships, the same script will automatically start validating console results.

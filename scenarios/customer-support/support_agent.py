@@ -5,7 +5,7 @@ Edictum Customer Support Agent Demo
 A real AI agent (GPT-4.1 via LangChain) assists with customer support tasks.
 Edictum governs every tool call -- the agent doesn't know it's being governed.
 
-Run it multiple times. The agent is non-deterministic. The governance is not.
+Run it multiple times. The agent is non-deterministic. The checks are not.
 
 Usage:
     python support_agent.py
@@ -257,7 +257,7 @@ def print_event(label: str, detail: str, icon: str = "│"):
     print(f"  {icon} {label}: {detail}")
 
 
-def print_governance(action: str, detail: str):
+def print_check(action: str, detail: str):
     icons = {
         "DENIED": "⛔",
         "ALLOWED": "✓",
@@ -417,15 +417,15 @@ async def main():
         elif hasattr(msg, 'content') and hasattr(msg, 'tool_call_id'):
             # ToolMessage
             if msg.content.startswith("DENIED:"):
-                print_governance("DENIED", msg.content[8:])
+                print_check("DENIED", msg.content[8:])
             elif '[REDACTED]' in msg.content:
-                print_governance("WARNING", "PII detected -- output redacted before reaching LLM")
+                print_check("WARNING", "PII detected -- output redacted before reaching LLM")
                 if len(msg.content) > 200:
                     print_event("Result", f"{msg.content[:200]}...", "  ")
                 else:
                     print_event("Result", msg.content, "  ")
             else:
-                print_governance("ALLOWED", "executed successfully")
+                print_check("ALLOWED", "executed successfully")
                 if len(msg.content) > 200:
                     print_event("Result", f"{msg.content[:200]}...", "  ")
                 else:
@@ -489,7 +489,7 @@ async def main():
         print(f"  Est. cost:         ${total_cost:.4f}")
         print()
 
-    print("  The agent was non-deterministic. The governance was not.")
+    print("  The agent was non-deterministic. The checks were not.")
     print("=" * 70)
 
 

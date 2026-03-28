@@ -2,7 +2,7 @@
 
 Shows Edictum integrated with the Claude Agent SDK via hooks.
 Same rules, full audit trail, OTel — the adapter intercepts
-every tool call for governance.
+every tool call for behavior checks.
 
 Note: The Claude Agent SDK sandboxes Bash to the working directory,
 so this demo uses local paths (./messy_files/ → ./organized/) instead

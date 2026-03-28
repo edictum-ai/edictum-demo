@@ -10,7 +10,7 @@ Full scenario demos, adversarial tests, benchmarks, and observability setup for
 
 ### Scenarios
 
-Real-world governance scenarios demonstrating Edictum in different industries.
+Real-world check scenarios demonstrating Edictum in different industries.
 
 | Scenario | Directory | Description |
 |----------|-----------|-------------|
@@ -23,7 +23,7 @@ Each scenario includes a governed agent AND an unguarded baseline for comparison
 
 ### Framework Adapters
 
-Same governance rules, 8 different agent frameworks. Proves Edictum is framework-agnostic.
+Same behavior rules, 8 different agent frameworks. Proves Edictum is framework-agnostic.
 
 | Framework | Demo | Adapter API |
 |-----------|------|-------------|
@@ -48,7 +48,7 @@ python adapters/test_hot_reload.py --agents 5         # test with more concurren
 
 ### Adversarial Testing
 
-Tests whether governance holds under adversarial conditions across multiple LLMs.
+Tests whether behavior holds under adversarial conditions across multiple LLMs.
 
 ```bash
 python adversarial/test_adversarial.py --model gpt-4.1

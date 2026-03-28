@@ -348,7 +348,7 @@ async def run_agent_streaming(role: str, ticket: str, task: str):
 
 
 # ---------------------------------------------------------------------------
-# UNGUARDED streaming agent loop (LangGraph, no governance)
+# UNGUARDED streaming agent loop (LangGraph, no behavior checks)
 # ---------------------------------------------------------------------------
 
 
@@ -881,7 +881,7 @@ function setGuarded(val) {
     lG.className = "mode-label inactive";
     lU.className = "mode-label active-unguarded";
     hdr.classList.add("unguarded-header");
-    sub.textContent = "Same agent, same tools \u2014 no governance, no audit trail";
+    sub.textContent = "Same agent, same tools \u2014 no behavior checks, no audit trail";
     card.classList.add("unguarded-card");
     fields.classList.add("hidden");
     btn.classList.add("danger");

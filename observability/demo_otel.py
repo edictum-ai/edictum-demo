@@ -1,7 +1,7 @@
 #!/usr/bin/env python3
-"""Edictum OpenTelemetry Demo — shows governance spans and metrics.
+"""Edictum OpenTelemetry Demo — shows behavior spans and metrics.
 
-Runs governance scenarios and displays the OTel telemetry (spans + metrics)
+Runs check scenarios and displays the OTel telemetry (spans + metrics)
 that edictum emits for each tool call.
 
 Two OTel modes:
@@ -80,7 +80,7 @@ def banner(mode: str):
     print("  EDICTUM OPENTELEMETRY DEMO")
     print("=" * 65)
     print(f"  OTel mode:  {mode}")
-    print(f"  Tracers:    edictum (GovernanceTelemetry), edictum.governance (engine)")
+    print(f"  Tracers:    edictum (BehaviorTelemetry), edictum.behavior (engine)")
     print(f"  Metrics:    edictum.calls.allowed, edictum.calls.denied")
     print()
     print("  Spans and metrics will appear between / after scenarios.")
@@ -103,7 +103,7 @@ async def main():
         print("No OTel exporters configured. Set OTEL_EXPORTER_OTLP_ENDPOINT or run as-is for console mode.")
         return
 
-    # 2. Now import edictum (GovernanceTelemetry grabs tracer/meter at init)
+    # 2. Now import edictum (BehaviorTelemetry grabs tracer/meter at init)
     from shared_v2 import (
         CollectingAuditSink,
         RULES_PATH,

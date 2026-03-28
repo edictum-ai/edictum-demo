@@ -1,6 +1,6 @@
 # Adversarial Testing
 
-Tests whether governance rules hold under adversarial conditions across multiple LLMs. Uses the pharmacovigilance scenario from `scenarios/pharma/`.
+Tests whether behavior rules hold under adversarial conditions across multiple LLMs. Uses the pharmacovigilance scenario from `scenarios/pharma/`.
 
 ## Scenarios
 

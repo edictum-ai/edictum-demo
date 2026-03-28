@@ -2,7 +2,7 @@
 Edictum CrewAI Adapter Demo
 ============================
 
-Demonstrates Edictum governance using the CrewAI adapter with global
+Demonstrates Edictum behavior checks using the CrewAI adapter with global
 before/after tool-call hooks. Exercises ALL rule types: pre/post/
 session/sandbox, deny/redact/warn/approve, principal/RBAC, observe mode,
 tool classification, and console integration.
@@ -112,7 +112,7 @@ async def main():
     principal = make_principal(args.role)
     scenarios = QUICK_SCENARIOS if args.quick else SCENARIOS
 
-    # ── Create governance guard ──────────────────────────────────────────
+    # ── Create behavior guard ──────────────────────────────────────────
     if args.console:
         guard = await create_console_guard(agent_id="edictum-crewai-agent")
     else:

@@ -236,7 +236,7 @@ def print_event(label: str, detail: str, icon: str = "│"):
     print(f"  {icon} {label}: {detail}")
 
 
-def print_governance(action: str, detail: str):
+def print_check(action: str, detail: str):
     icons = {
         "DENIED": "⛔",
         "ALLOWED": "✓",

@@ -2,7 +2,7 @@
 Edictum Claude Agent SDK Adapter Demo
 ======================================
 
-Demonstrates Edictum governance using the Claude Agent SDK with hook-based
+Demonstrates Edictum behavior checks using the Claude Agent SDK with hook-based
 integration. Exercises ALL rule types via directed tool calls: pre/post/
 session/sandbox rules, deny/redact/warn/approve effects, RBAC, and observe mode.
 
@@ -135,7 +135,7 @@ async def main():
     principal = make_principal(args.role)
     scenarios = QUICK_SCENARIOS if args.quick else SCENARIOS
 
-    # Create governance guard
+    # Create behavior guard
     if args.console:
         guard = await create_console_guard(
             agent_id="edictum-claude-agent-sdk-agent",

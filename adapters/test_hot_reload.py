@@ -91,7 +91,7 @@ rules:
       args.to:
         contains_any: ["@evil.com", "@attacker.com"]
     then:
-      effect: deny
+      action: block
       message: "Denied: emails to untrusted domain blocked"
       tags: [dlp, email]
 
@@ -102,7 +102,7 @@ rules:
       args.path:
         contains_any: ["/etc/passwd", ".env"]
     then:
-      effect: deny
+      action: block
       message: "Denied: sensitive file access"
       tags: [dlp]
 """.format(bundle_name=BUNDLE_NAME)
@@ -132,7 +132,7 @@ rules:
       args.path:
         contains_any: ["/etc/passwd", ".env"]
     then:
-      effect: deny
+      action: block
       message: "Denied: sensitive file access"
       tags: [dlp]
 """.format(bundle_name=BUNDLE_NAME)
@@ -440,7 +440,7 @@ async def main():
     print(f"  {GREEN}{passed} passed{NC}, {RED}{failed} failed{NC} / {total} checks")
     print()
     checks = [
-        ("Baseline governance (V1 denies evil email)", passed >= 1),
+        ("Baseline checks (V1 denies evil email)", passed >= 1),
         ("SSE reload detected (policy_version changed)", passed >= 2),
         ("Behavior changed after reload (V2 allows evil email)", passed >= 3),
         ("Second reload detected (V1 re-deployed)", passed >= 4),

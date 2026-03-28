@@ -1,6 +1,6 @@
 # Benchmarks
 
-Performance measurement for Edictum governance overhead.
+Performance measurement for Edictum behavior checks overhead.
 
 ## benchmark_adapters.py
 
@@ -25,29 +25,29 @@ python benchmark/benchmark_adapters.py
 | Google ADK | 41.1 us | ~105 us |
 
 All adapters add ~43us per tool call. The adapter layer adds zero measurable overhead
-on top of the core governance pipeline. At 43us vs 300-2000ms LLM round-trips,
-governance is **0.009% of total latency**.
+on top of the core check pipeline. At 43us vs 300-2000ms LLM round-trips,
+checks add **0.009% of total latency**.
 
 ## benchmark_latency.py
 
 End-to-end latency measurement with real OpenAI API calls. Measures 4 phases:
 
-1. **Baseline** -- direct tool call (no LLM, no governance)
-2. **Governance only** -- Edictum rule evaluation without LLM
-3. **LLM only** -- OpenAI API call without governance
-4. **End-to-end** -- full agent loop with LLM + governance
+1. **Baseline** -- direct tool call (no LLM, no behavior checks)
+2. **Check only** -- Edictum rule evaluation without LLM
+3. **LLM only** -- OpenAI API call without behavior checks
+4. **End-to-end** -- full agent loop with LLM + behavior checks
 
 ```bash
 python benchmark/benchmark_latency.py
 ```
 
-**Latest results:** ~43us governance overhead = 0.009% of a typical LLM round-trip.
+**Latest results:** ~43us check overhead = 0.009% of a typical LLM round-trip.
 
 ## prompt_vs_rules.py
 
 A -> B -> C customer journey benchmark comparing three deployment stages:
 
-- **A (Today)**: Bloated system prompt with governance rules in natural language. LLM self-polices.
+- **A (Today)**: Bloated system prompt with behavior rules in natural language. LLM self-polices.
 - **B (Day-one)**: Clean prompt, Edictum in observe mode. Full visibility, zero behavior change.
 - **C (Production)**: Clean prompt, Edictum in enforce mode. Deterministic rule enforcement.
 
@@ -63,5 +63,5 @@ Requires `OPENAI_API_KEY` in `.env`.
 
 1. **Zero overhead** -- ~43us per tool call across all 8 adapters, 0.009% of LLM latency
 2. **No adapter penalty** -- all adapters converge to the same ~43us; the framework integration layer is free
-3. **Rules are deterministic** -- same input always produces the same governance decision, unlike prompt engineering
+3. **Rules are deterministic** -- same input always produces the same behavior decision, unlike prompt engineering
 4. **Deploy observe mode tomorrow** -- zero risk, full audit trail, then flip to enforce when confident

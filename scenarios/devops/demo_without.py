@@ -1,6 +1,6 @@
 """File Organizer Demo — NO Edictum.
 
-Same agent, same prompt, same LLM — but with zero governance.
+Same agent, same prompt, same LLM — but with zero behavior checks.
 Tool calls go straight to the shell. The agent will:
 
   - Read .env (dumps AWS credentials to stdout)

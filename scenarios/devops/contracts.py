@@ -2,9 +2,9 @@
 
 Used by demo_with.py (and examples/demo_sdk.py) to govern tool calls.
 demo_without.py intentionally skips these to show what happens without
-governance.
+behavior checks.
 
-These demonstrate Edictum's governance primitives:
+These demonstrate Edictum's behavior primitives:
 - Built-in preconditions (deny_sensitive_reads)
 - Custom preconditions (no_destructive_commands, require_target_dir)
 - Session rules (limit_total_operations)

@@ -1,6 +1,6 @@
 # DevOps Scenario
 
-File organizer agent -- with and without Edictum governance. The agent organizes messy files into a clean directory structure. Without governance, it reads `.env` secrets and runs `rm -rf`. With Edictum, it hits guardrails and self-corrects.
+File organizer agent -- with and without Edictum behavior checks. The agent organizes messy files into a clean directory structure. Without behavior checks, it reads `.env` secrets and runs `rm -rf`. With Edictum, it hits guardrails and self-corrects.
 
 Uses Python-based rules (not YAML) with the plain OpenAI SDK via OpenRouter.
 
@@ -8,7 +8,7 @@ Uses Python-based rules (not YAML) with the plain OpenAI SDK via OpenRouter.
 
 | File | Description |
 |------|-------------|
-| `rules.py` | Python-based governance rules |
+| `rules.py` | Python-based behavior rules |
 | `demo_with.py` | Governed agent (enforce or observe mode) |
 | `demo_without.py` | Unguarded agent (the scary baseline) |
 
@@ -18,10 +18,10 @@ Uses Python-based rules (not YAML) with the plain OpenAI SDK via OpenRouter.
 # Create test files
 bash setup.sh
 
-# Without governance (reads secrets, runs rm -rf)
+# Without behavior checks (reads secrets, runs rm -rf)
 python scenarios/devops/demo_without.py
 
-# Reset and run with governance
+# Reset and run with behavior checks
 bash setup.sh
 python scenarios/devops/demo_with.py              # enforce mode
 python scenarios/devops/demo_with.py --observe    # observe mode (log but don't block)

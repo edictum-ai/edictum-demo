@@ -2,7 +2,7 @@
 Edictum Deep Agents Adapter Demo
 =================================
 
-Demonstrates Edictum governance with LangChain's Deep Agents framework.
+Demonstrates Edictum behavior checks with LangChain's Deep Agents framework.
 Deep Agents uses the same AgentMiddleware protocol as LangChain, so the
 existing LangChainAdapter works out of the box via ``as_middleware()``.
 
@@ -113,7 +113,7 @@ async def main():
     principal = make_principal(args.role)
     scenarios = QUICK_SCENARIOS if args.quick else SCENARIOS
 
-    # Create governance guard
+    # Create behavior guard
     if args.console:
         guard = await create_console_guard(
             agent_id="edictum-deep-agents-demo",
@@ -131,7 +131,7 @@ async def main():
 
     llm = ChatOpenAI(model="gpt-4.1-mini", temperature=0)
 
-    # Create deep agent with Edictum governance middleware.
+    # Create deep agent with Edictum behavior checks middleware.
     # The middleware parameter accepts AgentMiddleware instances — the same
     # protocol LangChain uses.
     agent = create_deep_agent(
@@ -176,7 +176,7 @@ async def main():
             print_result(action, detail)
             continue
 
-        # Fallback: parse result messages for governance decisions
+        # Fallback: parse result messages for behavior decisions
         for msg in result["messages"]:
             if not (hasattr(msg, "content") and hasattr(msg, "tool_call_id")):
                 continue
