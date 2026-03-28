@@ -1,12 +1,12 @@
 # Customer Support Scenario
 
-Demonstrates Edictum governance for a customer support AI agent.
+Demonstrates Edictum behavior checks for a customer support AI agent.
 
 ## What it demonstrates
 - Data minimization: PII (emails, phones, addresses, partial card numbers) detected and redacted in all tool output
 - Billing access control: only senior agents, billing specialists, and supervisors can view billing data
 - Refund limits: refunds over $500 require supervisor or billing specialist role
-- Escalation governance: escalations require a documented reason
+- Escalation behavior: escalations require a documented reason
 - Ticket lifecycle: only senior agents and supervisors can close/resolve tickets
 - Session limits: caps on total tool calls and per-tool call limits
 
@@ -32,7 +32,7 @@ python customer-support/support_agent.py --role billing_specialist   # full bill
 python customer-support/support_agent.py --role supervisor           # full access + high refunds
 python customer-support/support_agent.py --mode observe              # observe mode
 
-# CLI -- unguarded (shows what happens without governance)
+# CLI -- unguarded (shows what happens without behavior checks)
 python customer-support/support_agent_unguarded.py
 python customer-support/support_agent_unguarded.py --test jailbreak
 python customer-support/support_agent_unguarded.py --test data_harvesting

@@ -3,13 +3,13 @@
 Edictum Adapter Overhead Benchmark
 ===================================
 
-Measures the governance overhead added by each adapter's integration layer,
+Measures the check overhead added by each adapter's integration layer,
 isolated from LLM latency. Calls adapter hooks/wrappers directly with mock
 tools to measure pure framework overhead.
 
 Phases:
-  1. BASELINE      — Direct tool call, no governance
-  2. guard.run()   — Core governance pipeline (no adapter)
+  1. BASELINE      — Direct tool call, no behavior checks
+  2. guard.run()   — Core check pipeline (no adapter)
   3. Per-adapter   — Each adapter's integration path
 
 Usage:
@@ -42,7 +42,7 @@ class CollectingSink(AuditSink):
 
 CONTRACTS_YAML = """\
 apiVersion: edictum/v1
-kind: ContractBundle
+kind: Ruleset
 metadata:
   name: benchmark
 defaults:
@@ -54,7 +54,7 @@ tools:
     side_effect: irreversible
   delete_record:
     side_effect: irreversible
-contracts:
+rules:
   - id: block-evil-email
     type: pre
     tool: send_email
@@ -62,7 +62,7 @@ contracts:
       args.to:
         contains_any: ["@evil.com"]
     then:
-      effect: deny
+      action: block
       message: "Blocked"
   - id: pii-detect
     type: post
@@ -71,14 +71,14 @@ contracts:
       output.text:
         matches_any: ['\\b\\d{3}-\\d{2}-\\d{4}\\b']
     then:
-      effect: redact
+      action: redact
       message: "PII redacted"
   - id: rate-limit
     type: session
     limits:
       max_tool_calls: 1000
     then:
-      effect: deny
+      action: block
       message: "Rate limited"
 """
 
@@ -330,7 +330,7 @@ async def main():
 
     # Phase 1: baseline
     baseline = await bench_baseline()
-    print(f"  {'BASELINE (no governance)':<25}", end="")
+    print(f"  {'BASELINE (no behavior checks)':<25}", end="")
     for name in ["allowed", "denied", "post-pii"]:
         med, _ = baseline[name]
         print(f"  {name}: {fmt(med):>10}", end="")
@@ -393,7 +393,7 @@ async def main():
     print("=" * 78)
     print("  CONTEXT")
     print("=" * 78)
-    print(f"  Core governance overhead:  {fmt(core_avg)} per tool call")
+    print(f"  Core check overhead:  {fmt(core_avg)} per tool call")
     print(f"  Typical LLM round-trip:    300-2000 ms")
     print(f"  Governance / LLM ratio:    {core_avg / 1000 / 500 * 100:.3f}% (at 500ms LLM)")
     print("=" * 78)

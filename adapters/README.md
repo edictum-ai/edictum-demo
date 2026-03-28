@@ -1,9 +1,9 @@
 # Framework Adapters
 
-Same governance contracts, 8 different agent frameworks. Proves Edictum is framework-agnostic.
+Same behavior rules, 8 different agent frameworks. Proves Edictum is framework-agnostic.
 
-All demos use shared mock tools and contracts (`shared_v2.py`, `contracts.yaml`) that exercise
-all edictum features: pre/post/session/sandbox contracts, deny/redact/warn/approve effects,
+All demos use shared mock tools and rules (`shared_v2.py`, `rules.yaml`) that exercise
+all edictum features: pre/post/session/sandbox rules, deny/redact/warn/approve effects,
 RBAC, observe mode, and HITL approval.
 
 ## Demos
@@ -22,7 +22,7 @@ RBAC, observe mode, and HITL approval.
 ## Run
 
 ```bash
-# Standalone mode (local YAML contracts)
+# Standalone mode (local YAML rules)
 python adapters/demo_langchain.py
 python adapters/demo_openai_agents.py
 python adapters/demo_agno.py
@@ -94,7 +94,7 @@ Every demo exercises the same 17 scenarios covering:
 
 ## Hot Reload Test
 
-Tests that contract changes deployed via the console propagate to connected agents
+Tests that rule changes deployed via the console propagate to connected agents
 in real-time via SSE, without restarting the agent. No LLM calls -- uses `guard.run()`
 directly, so it's fast, deterministic, and free.
 
@@ -113,19 +113,19 @@ Requires `EDICTUM_API_KEY` in `.env` and a running console. Admin credentials de
 
 | Check | Description |
 |-------|-------------|
-| Baseline governance | V1 contracts deny email to evil.com |
+| Baseline checks | V1 rules deny email to evil.com |
 | SSE reload detected | `policy_version` changes after deploying V2 |
 | Behavior changed | V2 (email rule removed) allows evil email |
 | Second reload | `policy_version` changes again after re-deploying V1 |
 | Behavior restored | V1 denies evil email again -- full round-trip |
 
-The test uploads two contract variants (with/without an email deny rule), deploys them
+The test uploads two rule variants (with/without an email deny rule), deploys them
 in sequence, and verifies that multiple connected agents pick up each change via SSE
 hot-reload within the timeout window.
 
 ## Integration Test
 
-Run all adapters and validate governance results in one command:
+Run all adapters and validate check results in one command:
 
 ```bash
 # Quick standalone test (~3 min)
@@ -167,7 +167,7 @@ EDICTUM_REPO=/other/path/to/edictum ./adapters/run_all.sh --branch
 
 | Mode | Checks |
 |------|--------|
-| Standalone | Exact governance counts: 5D 1R 1O 5A (±1 for LLM flakiness) |
+| Standalone | Exact check counts: 5D 1R 1O 5A (±1 for LLM flakiness) |
 | Console | If #70 (TeeAuditSink) is fixed: validates counts. If not: flags `#70` and skips |
 | Benchmark | Runs `benchmark_adapters.py`, reports core overhead per tool call |
 
@@ -178,7 +178,7 @@ implemented. If all results show ALLOWED with 0 denials, it reports:
 
 ```
   #70  — no local audit in console mode (all results show ALLOWED)
-         governance runs server-side but classify_result() can't see events
+         checks run server-side but classify_result() can't see events
 ```
 
 Once #70 ships, the same script will automatically start validating console results.

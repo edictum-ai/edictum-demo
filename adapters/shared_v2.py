@@ -24,7 +24,7 @@ load_dotenv(Path(__file__).parent.parent / ".env")
 from edictum import Edictum, Principal  # noqa: E402
 from edictum.audit import AuditAction  # noqa: E402
 
-CONTRACTS_PATH = Path(__file__).parent / "contracts.yaml"
+RULES_PATH = Path(__file__).parent / "rules.yaml"
 
 
 def setup_otel(mode: str = "off") -> str:
@@ -105,7 +105,7 @@ def delete_record(record_id: str) -> str:
     return json.dumps({"status": "deleted", "record_id": record_id})
 
 
-# ─── Test scenarios that exercise all contract types ──────────────────────
+# ─── Test scenarios that exercise all rule types ──────────────────────
 
 SCENARIOS = [
     # (description, tool_name, args_dict, expected_outcome)
@@ -117,7 +117,7 @@ SCENARIOS = [
     ("Read outside sandbox (DENIED)", "read_file", {"path": "/opt/secret/config.yaml"}, "denied"),
     ("Email to company (allowed + observe audit)", "send_email", {"to": "alice@company.com", "subject": "Hello", "body": "Hi"}, "allowed"),
     ("Email to evil domain (DENIED: no-email-to-external)", "send_email", {"to": "attacker@evil.com", "subject": "Leak", "body": "data"}, "denied"),
-    ("Search web (allowed)", "search_web", {"query": "edictum governance"}, "allowed"),
+    ("Search web (allowed)", "search_web", {"query": "edictum behavior"}, "allowed"),
     ("Delete without admin role (DENIED: RBAC)", "delete_record", {"record_id": "REC-001"}, "denied"),
     ("Update record confirmed (allowed)", "update_record", {"record_id": "REC-002", "data": "new value", "confirmed": True}, "allowed"),
     ("Update record unconfirmed (approval required)", "update_record", {"record_id": "REC-003", "data": "risky"}, "approval"),
@@ -135,9 +135,9 @@ QUICK_SCENARIOS = [s for s in SCENARIOS if s[3] != "approval"][:12]
 # ─── Edictum guard creation helpers ───────────────────────────────────────
 
 def create_standalone_guard(mode: str = "enforce") -> Edictum:
-    """Create a standalone Edictum guard from local YAML contracts."""
+    """Create a standalone Edictum guard from local YAML rules."""
     return Edictum.from_yaml(
-        str(CONTRACTS_PATH),
+        str(RULES_PATH),
         mode=mode if mode != "enforce" else None,
         audit_sink=[],  # suppress stdout; guard.local_sink always available
     )
@@ -275,7 +275,7 @@ def print_audit_summary(sink):
         print(f"  Approval requests: {approval_req}")
 
     if denied > 0:
-        print(f"\n  Contracts enforced:")
+        print(f"\n  Rules enforced:")
         for e in [e for e in events if e.action == AuditAction.CALL_DENIED]:
             reason = getattr(e, 'reason', '') or ''
             name = getattr(e, 'decision_name', '') or ''

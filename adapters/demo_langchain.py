@@ -2,9 +2,9 @@
 Edictum LangChain + LangGraph Adapter Demo
 ============================================
 
-Demonstrates Edictum governance using the LangChain adapter with a LangGraph
-agent. Exercises ALL contract types via directed tool calls: pre/post/
-session/sandbox contracts, deny/redact/warn/approve effects, RBAC, and
+Demonstrates Edictum behavior checks using the LangChain adapter with a LangGraph
+agent. Exercises ALL rule types via directed tool calls: pre/post/
+session/sandbox rules, deny/redact/warn/approve effects, RBAC, and
 observe mode.
 
 Uses the new ``create_agent`` + ``wrap_tool_call`` middleware API
@@ -113,7 +113,7 @@ async def main():
     principal = make_principal(args.role)
     scenarios = QUICK_SCENARIOS if args.quick else SCENARIOS
 
-    # Create governance guard
+    # Create behavior guard
     if args.console:
         guard = await create_console_guard(
             agent_id="edictum-langchain-agent",
@@ -126,8 +126,8 @@ async def main():
     adapter = LangChainAdapter(guard, principal=principal)
 
     @wrap_tool_call
-    async def edictum_governance(request, handler):
-        """Edictum governance middleware: pre-check → execute → post-check."""
+    async def edictum_behavior(request, handler):
+        """Edictum behavior checks middleware: pre-check → execute → post-check."""
         from langchain_core.messages import ToolMessage
 
         pre_result = await adapter._pre_tool_call(request)
@@ -144,7 +144,7 @@ async def main():
         return post_result.result
 
     llm = ChatOpenAI(model="gpt-4.1-mini", temperature=0)
-    agent = create_agent(llm, tools=ALL_TOOLS, middleware=[edictum_governance])
+    agent = create_agent(llm, tools=ALL_TOOLS, middleware=[edictum_behavior])
 
     print_banner("LangChain + LangGraph", args.mode, console=args.console)
 
@@ -182,7 +182,7 @@ async def main():
             print_result(action, detail)
             continue
 
-        # Fallback: parse result messages for governance decisions
+        # Fallback: parse result messages for behavior decisions
         for msg in result["messages"]:
             if not (hasattr(msg, "content") and hasattr(msg, "tool_call_id")):
                 continue

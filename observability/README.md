@@ -1,6 +1,6 @@
 # Observability
 
-OpenTelemetry integration for Edictum-governed AI agents. Traces every governance
+OpenTelemetry integration for Edictum-governed AI agents. Traces every behavior check
 decision, metrics for allowed/denied counts, and a Grafana dashboard to visualize it all.
 
 ## Architecture
@@ -11,11 +11,11 @@ Agent (any framework)
   v
 Edictum guard.run()
   |
-  +-- GovernanceTelemetry (tracer: "edictum")
+  +-- BehaviorTelemetry (tracer: "edictum")
   |     span: tool.execute {tool_name}
   |     counters: edictum.calls.allowed, edictum.calls.denied
   |
-  +-- Engine governance tracer (tracer: "edictum.governance")
+  +-- Engine behavior tracer (tracer: "edictum.behavior")
   |     span: edictum.evaluate  (one per audit event)
   |
   v
@@ -32,7 +32,7 @@ Edictum emits two types of spans from two independent tracers, plus two metric c
 
 ### Span: `tool.execute {tool_name}`
 
-Emitted by `GovernanceTelemetry` (tracer name: `edictum`). One span per `guard.run()` call,
+Emitted by `BehaviorTelemetry` (tracer name: `edictum`). One span per `guard.run()` call,
 covering the full lifecycle from pre-execution through post-execution.
 
 | Attribute | Type | Description |
@@ -40,18 +40,18 @@ covering the full lifecycle from pre-execution through post-execution.
 | `tool.name` | string | Tool name |
 | `tool.side_effect` | string | `pure`, `read`, `write`, or `irreversible` |
 | `tool.call_index` | int | Sequential call index within the session |
-| `governance.environment` | string | Execution environment |
-| `governance.run_id` | string | Session/run ID |
-| `governance.action` | string | `allowed`, `denied`, `would_deny`, `approved` |
-| `governance.reason` | string | Denial reason (if denied) |
-| `governance.would_deny_reason` | string | Reason (if observe mode) |
-| `governance.tool_success` | bool | Whether the tool executed successfully |
-| `governance.postconditions_passed` | bool | Whether postconditions passed (false = PII redacted) |
+| `behavior.environment` | string | Execution environment |
+| `behavior.run_id` | string | Session/run ID |
+| `behavior.action` | string | `allowed`, `denied`, `would_deny`, `approved` |
+| `behavior.reason` | string | Denial reason (if denied) |
+| `behavior.would_deny_reason` | string | Reason (if observe mode) |
+| `behavior.tool_success` | bool | Whether the tool executed successfully |
+| `behavior.postconditions_passed` | bool | Whether postconditions passed (false = PII redacted) |
 | `edictum.policy_version` | string | Contract bundle version (if set) |
 
 ### Span: `edictum.evaluate`
 
-Emitted by the engine's governance tracer (tracer name: `edictum.governance`). One span per
+Emitted by the engine's behavior tracer (tracer name: `edictum.behavior`). One span per
 audit event — typically 1-2 per tool call (pre-decision + post-execution).
 
 | Attribute | Type | Description |
@@ -60,7 +60,7 @@ audit event — typically 1-2 per tool call (pre-decision + post-execution).
 | `edictum.verdict` | string | `call_denied`, `call_allowed`, `call_executed`, `call_would_deny`, `call_approval_requested`, etc. |
 | `edictum.verdict.reason` | string | Human-readable reason |
 | `edictum.decision.source` | string | `precondition`, `sandbox`, `postcondition`, `session`, `hook` |
-| `edictum.decision.name` | string | Name of the deciding contract/hook |
+| `edictum.decision.name` | string | Name of the deciding rule/hook |
 | `edictum.side_effect` | string | Tool classification |
 | `edictum.environment` | string | Execution environment |
 | `edictum.mode` | string | `enforce` or `observe` |
@@ -95,7 +95,7 @@ cd /path/to/edictum-demo
 python observability/demo_otel.py
 ```
 
-This runs 6 governance scenarios (allow, deny, redact, observe, RBAC, rate limit) and
+This runs 6 check scenarios (allow, deny, redact, observe, RBAC, rate limit) and
 prints every span and metric to the terminal.
 
 ## Local Grafana Stack
@@ -174,7 +174,7 @@ across 4 rows:
 |---|-------|--------|---------------|
 | 1 | Governance Decisions | Prometheus | Allowed vs denied rate over time |
 | 2 | Denial Rate | Prometheus | Percentage of calls denied (gauge) |
-| 3 | Total Calls | Prometheus | Total governance-evaluated calls (stat) |
+| 3 | Total Calls | Prometheus | Total behavior-evaluated calls (stat) |
 | 4 | Denials by Tool | Prometheus | Which tools get denied most |
 | 5 | Allowed by Tool | Prometheus | Which tools are used most (allowed) |
 | 6 | Denied vs Allowed per Tool | Prometheus | Stacked horizontal comparison |
@@ -217,8 +217,8 @@ python adapters/demo_langchain.py
 ## Graceful Degradation
 
 If `opentelemetry-sdk` is not installed, all telemetry becomes a no-op:
-- `GovernanceTelemetry` returns `_NoOpSpan` instances
-- Engine skips `_emit_otel_governance_span()` entirely
-- Zero runtime overhead — governance still works, just without telemetry
+- `BehaviorTelemetry` returns `_NoOpSpan` instances
+- Engine skips `_emit_otel_behavior_span()` entirely
+- Zero runtime overhead — checks still work, just without telemetry
 
 Install OTel support: `pip install edictum[otel]`

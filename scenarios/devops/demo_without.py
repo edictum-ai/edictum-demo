@@ -1,6 +1,6 @@
 """File Organizer Demo — NO Edictum.
 
-Same agent, same prompt, same LLM — but with zero governance.
+Same agent, same prompt, same LLM — but with zero behavior checks.
 Tool calls go straight to the shell. The agent will:
 
   - Read .env (dumps AWS credentials to stdout)
@@ -133,7 +133,7 @@ def run_agent():
             print("\n  Agent finished.\n")
             break
 
-        # Process each tool call — NO guard, NO contracts, NO audit
+        # Process each tool call — NO guard, NO rules, NO audit
         for tc in message.tool_calls:
             tool_name = tc.function.name
             tool_args = json.loads(tc.function.arguments)

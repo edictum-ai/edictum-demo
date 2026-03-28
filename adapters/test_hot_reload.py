@@ -2,18 +2,18 @@
 Edictum Hot Reload Integration Test
 ====================================
 
-Tests that contract changes deployed via the console propagate to connected
+Tests that rule changes deployed via the console propagate to connected
 agents in real-time via SSE, without restarting the agent.
 
 Flow:
   1. Login to console (get session cookie for dashboard API)
-  2. Upload original contracts → deploy to production
+  2. Upload original rules → deploy to production
   3. Connect guards via from_server() (SSE auto-watch)
   4. Verify baseline: email to evil.com → DENIED
-  5. Upload modified contracts (email rule removed) → deploy
+  5. Upload modified rules (email rule removed) → deploy
   6. Wait for guards to hot-reload (policy_version changes)
   7. Verify: email to evil.com → ALLOWED
-  8. Re-deploy original contracts
+  8. Re-deploy original rules
   9. Wait for hot-reload again
   10. Verify: email to evil.com → DENIED again
 
@@ -68,7 +68,7 @@ NC = "\033[0m"
 
 CONTRACTS_V1 = """\
 apiVersion: edictum/v1
-kind: ContractBundle
+kind: Ruleset
 
 metadata:
   name: {bundle_name}
@@ -83,7 +83,7 @@ tools:
   get_weather:
     side_effect: pure
 
-contracts:
+rules:
   - id: no-email-to-external
     type: pre
     tool: send_email
@@ -91,7 +91,7 @@ contracts:
       args.to:
         contains_any: ["@evil.com", "@attacker.com"]
     then:
-      effect: deny
+      action: block
       message: "Denied: emails to untrusted domain blocked"
       tags: [dlp, email]
 
@@ -102,14 +102,14 @@ contracts:
       args.path:
         contains_any: ["/etc/passwd", ".env"]
     then:
-      effect: deny
+      action: block
       message: "Denied: sensitive file access"
       tags: [dlp]
 """.format(bundle_name=BUNDLE_NAME)
 
 CONTRACTS_V2 = """\
 apiVersion: edictum/v1
-kind: ContractBundle
+kind: Ruleset
 
 metadata:
   name: {bundle_name}
@@ -124,7 +124,7 @@ tools:
   get_weather:
     side_effect: pure
 
-contracts:
+rules:
   - id: no-sensitive-files
     type: pre
     tool: read_file
@@ -132,7 +132,7 @@ contracts:
       args.path:
         contains_any: ["/etc/passwd", ".env"]
     then:
-      effect: deny
+      action: block
       message: "Denied: sensitive file access"
       tags: [dlp]
 """.format(bundle_name=BUNDLE_NAME)
@@ -292,7 +292,7 @@ async def main():
         print(f"  {GREEN}OK{NC} — session established")
 
         # ── Step 2: Upload & deploy V1 (email deny active) ───────────
-        print(f"{CYAN}[2/9]{NC} Uploading contracts V1 (email deny active)...")
+        print(f"{CYAN}[2/9]{NC} Uploading rules V1 (email deny active)...")
         v1_resp = await console.upload_bundle(CONTRACTS_V1)
         v1_version = v1_resp["version"]
         print(f"  Uploaded: {BUNDLE_NAME} v{v1_version}")
@@ -341,7 +341,7 @@ async def main():
         old_version = guards[0].policy_version
 
         # ── Step 5: Upload & deploy V2 (email deny REMOVED) ──────────
-        print(f"{CYAN}[5/9]{NC} Uploading contracts V2 (email deny removed)...")
+        print(f"{CYAN}[5/9]{NC} Uploading rules V2 (email deny removed)...")
         v2_resp = await console.upload_bundle(CONTRACTS_V2)
         v2_version = v2_resp["version"]
         print(f"  Uploaded: {BUNDLE_NAME} v{v2_version}")
@@ -376,7 +376,7 @@ async def main():
             print(f"  Agent {i}: {status}")
 
         if all(reload_results):
-            print(f"  {GREEN}PASS{NC} — all agents allow evil email after contract change")
+            print(f"  {GREEN}PASS{NC} — all agents allow evil email after rule change")
             passed += 1
         else:
             print(f"  {RED}FAIL{NC} — some agents still deny (hot reload didn't take effect)")
@@ -440,7 +440,7 @@ async def main():
     print(f"  {GREEN}{passed} passed{NC}, {RED}{failed} failed{NC} / {total} checks")
     print()
     checks = [
-        ("Baseline governance (V1 denies evil email)", passed >= 1),
+        ("Baseline checks (V1 denies evil email)", passed >= 1),
         ("SSE reload detected (policy_version changed)", passed >= 2),
         ("Behavior changed after reload (V2 allows evil email)", passed >= 3),
         ("Second reload detected (V1 re-deployed)", passed >= 4),

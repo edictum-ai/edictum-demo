@@ -2,9 +2,9 @@
 Edictum Semantic Kernel Adapter Demo
 ======================================
 
-Demonstrates Edictum governance using the Semantic Kernel adapter with
-AUTO_FUNCTION_INVOCATION kernel filters. Exercises ALL contract types via
-directed tool calls: pre/post/session/sandbox contracts, deny/redact/warn/
+Demonstrates Edictum behavior checks using the Semantic Kernel adapter with
+AUTO_FUNCTION_INVOCATION kernel filters. Exercises ALL rule types via
+directed tool calls: pre/post/session/sandbox rules, deny/redact/warn/
 approve effects, RBAC, and observe mode.
 
 Usage:
@@ -88,7 +88,7 @@ async def main():
     principal = make_principal(args.role)
     scenarios = QUICK_SCENARIOS if args.quick else SCENARIOS
 
-    # Create governance guard
+    # Create behavior guard
     if args.console:
         guard = await create_console_guard(
             agent_id="edictum-sk-agent",

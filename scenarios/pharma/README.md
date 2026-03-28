@@ -1,14 +1,14 @@
 # Pharmacovigilance Scenario
 
-Clinical trial pharmacovigilance agent governed by Edictum. Uses LangGraph's `create_react_agent` with `ToolNode(wrap_tool_call=adapter.as_tool_wrapper())` for governance integration. Demonstrates HIPAA/PII protection, role-based access, change control, audit trails, and regulatory compliance contracts.
+Clinical trial pharmacovigilance agent governed by Edictum. Uses LangGraph's `create_react_agent` with `ToolNode(wrap_tool_call=adapter.as_tool_wrapper())` for behavior integration. Demonstrates HIPAA/PII protection, role-based access, change control, audit trails, and regulatory compliance rules.
 
 ## Files
 
 | File | Description |
 |------|-------------|
-| `pharma_contracts.yaml` | YAML contract bundle (`edictum/v1`) |
+| `pharma_rules.yaml` | YAML rule bundle (`edictum/v1`) |
 | `pharma_agent.py` | CLI agent -- `LangChainAdapter` + `create_react_agent` |
-| `pharma_agent_unguarded.py` | Same agent, no governance (for comparison) |
+| `pharma_agent_unguarded.py` | Same agent, no behavior checks (for comparison) |
 | `pharma_web_demo.py` | FastAPI + SSE real-time web UI |
 
 ## Run
@@ -19,7 +19,7 @@ python scenarios/pharma/pharma_agent.py
 python scenarios/pharma/pharma_agent.py --role researcher   # gets denied on patient data
 python scenarios/pharma/pharma_agent.py --observe            # observe mode
 
-# CLI -- unguarded (shows what happens without governance)
+# CLI -- unguarded (shows what happens without behavior checks)
 python scenarios/pharma/pharma_agent_unguarded.py
 python scenarios/pharma/pharma_agent_unguarded.py --test jailbreak
 
@@ -46,5 +46,5 @@ python scenarios/pharma/pharma_web_demo.py
 - **Change control**: Case report updates require a CAPA/deviation tracking ticket
 - **PII detection + redaction**: Patient identifiers (SSN, names, email) are detected in tool output and redacted before the LLM sees them
 - **Regulatory compliance**: Exports are scanned for PII before submission
-- **Audit trail**: Every governance decision is logged with full context
+- **Audit trail**: Every behavior decision is logged with full context
 - **Observe mode**: Logs would-deny events without blocking

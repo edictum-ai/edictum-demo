@@ -1,13 +1,13 @@
 # Fintech / Trading Compliance Scenario
 
-Demonstrates Edictum governance for a trading desk AI agent.
+Demonstrates Edictum behavior checks for a trading desk AI agent.
 
 ## What it demonstrates
 
 - **Trade size limits** -- trades over 1,000 shares denied without manager approval
 - **Account access control** -- full profile / transaction history restricted by role
 - **Restricted account blocking** -- frozen/investigated accounts completely inaccessible
-- **Compliance report governance** -- audit ticket required for report generation
+- **Compliance report checks** -- audit ticket required for report generation
 - **PII detection in financial data** -- SSN/EIN, account numbers, emails, phones redacted
 - **Session rate limiting** -- caps on total tool calls and per-tool limits
 

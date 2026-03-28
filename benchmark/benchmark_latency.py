@@ -3,16 +3,16 @@
 Edictum Latency Benchmark — Real LLM Calls
 ===========================================
 
-Measures governance overhead precisely, then shows it in context of a
+Measures check overhead precisely, then shows it in context of a
 real OpenAI agent loop.
 
 Four phases:
-  1. BASELINE       — Direct tool call, no LLM, no governance (N=100, µs)
+  1. BASELINE       — Direct tool call, no LLM, no behavior checks (N=100, µs)
   2. GOVERNANCE ONLY — guard.run() around tool call, no LLM (N=100, ms)
   3. LLM CALL ONLY  — Single OpenAI API call, no tool execution (N=5, ms)
   4. END-TO-END     — OpenAI API + governed tool execution (N=5, seconds)
 
-The key metric is Phase 2: the isolated governance overhead.
+The key metric is Phase 2: the isolated check overhead.
 Phase 4 shows it's negligible compared to LLM latency.
 
 Usage:
@@ -92,15 +92,15 @@ TOOLS = [
 ]
 
 
-# --- YAML contracts (inline) ------------------------------------------------------
+# --- YAML rules (inline) ------------------------------------------------------
 
 CONTRACTS_YAML = """\
 apiVersion: edictum/v1
-kind: ContractBundle
+kind: Ruleset
 
 metadata:
-  name: benchmark-contracts
-  description: Inline contracts for latency benchmarking
+  name: benchmark-rules
+  description: Inline rules for latency benchmarking
 
 defaults:
   mode: enforce
@@ -108,7 +108,7 @@ defaults:
 observability:
   stdout: false
 
-contracts:
+rules:
   - id: restrict-patient-data
     type: pre
     tool: query_clinical_data
@@ -117,7 +117,7 @@ contracts:
         - args.dataset: { in: [adverse_events_detailed, patient_records] }
         - principal.role: { not_in: [pharmacovigilance, clinical_data_manager] }
     then:
-      effect: deny
+      action: block
       message: "Access to {args.dataset} requires pharmacovigilance role."
       tags: [access-control]
 
@@ -127,7 +127,7 @@ contracts:
     when:
       output.text: { matches: '\\b\\d{3}-\\d{2}-\\d{4}\\b' }
     then:
-      effect: warn
+      action: warn
       message: "Possible SSN detected in output"
       tags: [pii]
 
@@ -136,7 +136,7 @@ contracts:
     limits:
       max_tool_calls: 50
     then:
-      effect: deny
+      action: block
       message: "Session limit exceeded"
 """
 
@@ -220,7 +220,7 @@ async def benchmark(skip_llm: bool = False):
 
     try:
         # ==================================================================
-        # Phase 1: BASELINE — direct tool call, no LLM, no governance
+        # Phase 1: BASELINE — direct tool call, no LLM, no behavior checks
         # ==================================================================
         print("=" * 70)
         print(f"  Phase 1: BASELINE — direct tool call (N={N_LOCAL})")
@@ -247,7 +247,7 @@ async def benchmark(skip_llm: bool = False):
         # ==================================================================
         print("=" * 70)
         print(f"  Phase 2: GOVERNANCE ONLY — guard.run() + tool (N={N_LOCAL})")
-        print(f"  This isolates the pure governance overhead.")
+        print(f"  This isolates the pure check overhead.")
         print("=" * 70)
         print()
 
@@ -297,7 +297,7 @@ async def benchmark(skip_llm: bool = False):
 
         avg_overhead_us = sum(overheads_us) / len(overheads_us)
         print()
-        print(f"  Average governance overhead: {fmt_us(avg_overhead_us)}")
+        print(f"  Average check overhead: {fmt_us(avg_overhead_us)}")
         print()
 
         if not skip_llm:
@@ -432,7 +432,7 @@ async def benchmark(skip_llm: bool = False):
             print(f"  Est. cost:        ${grand_cost:.4f}  (gpt-4.1 @ ${PRICE_INPUT}/1M in, ${PRICE_OUTPUT}/1M out)")
             print(f"  Cost per call:    ${grand_cost / total_calls:.5f}")
             print()
-            print(f"  Edictum governance adds {fmt_us(avg_overhead_us)} per tool call.")
+            print(f"  Edictum behavior checks adds {fmt_us(avg_overhead_us)} per tool call.")
             print(f"  At {med_llm_ms:.0f} ms per LLM round-trip, that's {(avg_overhead_us / 1000) / med_llm_ms * 100:.2f}% overhead.")
             print("=" * 70)
 

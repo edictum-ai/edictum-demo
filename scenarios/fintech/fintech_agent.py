@@ -5,7 +5,7 @@ Edictum Fintech Agent Demo
 A real AI agent (GPT-4.1 via LangChain) assists with trading compliance tasks.
 Edictum governs every tool call -- the agent doesn't know it's being governed.
 
-Run it multiple times. The agent is non-deterministic. The governance is not.
+Run it multiple times. The agent is non-deterministic. The checks are not.
 
 Usage:
     python fintech_agent.py
@@ -223,8 +223,8 @@ def search_market_data(query: str) -> str:
 def redact_pii(text: str) -> str:
     """Replace PII patterns with redaction markers.
 
-    These match the same patterns as the postcondition contracts in
-    fintech_contracts.yaml, so redaction fires exactly when postconditions warn.
+    These match the same patterns as the postcondition rules in
+    fintech_rules.yaml, so redaction fires exactly when postconditions warn.
     """
     text = re.sub(r'\b\d{3}-\d{2}-\d{4}\b', '[SSN/EIN REDACTED]', text)
     text = re.sub(r'\bACC-\d{6,10}\b', '[ACCOUNT-ID REDACTED]', text)
@@ -245,7 +245,7 @@ def print_event(label: str, detail: str, icon: str = "│"):
     print(f"  {icon} {label}: {detail}")
 
 
-def print_governance(action: str, detail: str):
+def print_check(action: str, detail: str):
     icons = {
         "DENIED": "⛔",
         "ALLOWED": "✓",
@@ -343,11 +343,11 @@ async def main():
     if Path(audit_path).exists():
         Path(audit_path).unlink()
 
-    contracts_path = Path(__file__).parent / "fintech_contracts.yaml"
+    rules_path = Path(__file__).parent / "fintech_rules.yaml"
     mode = "observe" if args.mode == "observe" else None
     audit_sink = FileAuditSink(audit_path)
     guard = Edictum.from_yaml(
-        str(contracts_path),
+        str(rules_path),
         mode=mode,
         audit_sink=audit_sink,
     )
@@ -377,7 +377,7 @@ async def main():
     # Banner
     print("=" * 70)
     print("  EDICTUM FINTECH AGENT DEMO")
-    print("  Runtime contracts for AI agents in trading compliance")
+    print("  Runtime rules for AI agents in trading compliance")
     print("=" * 70)
 
     print_header(f"TASK: {task}")
@@ -410,15 +410,15 @@ async def main():
         elif hasattr(msg, 'content') and hasattr(msg, 'tool_call_id'):
             # ToolMessage
             if msg.content.startswith("DENIED:"):
-                print_governance("DENIED", msg.content[8:])
+                print_check("DENIED", msg.content[8:])
             elif '[REDACTED]' in msg.content:
-                print_governance("WARNING", "PII detected -- output redacted before reaching LLM")
+                print_check("WARNING", "PII detected -- output redacted before reaching LLM")
                 if len(msg.content) > 200:
                     print_event("Result", f"{msg.content[:200]}...", "  ")
                 else:
                     print_event("Result", msg.content, "  ")
             else:
-                print_governance("ALLOWED", "executed successfully")
+                print_check("ALLOWED", "executed successfully")
                 if len(msg.content) > 200:
                     print_event("Result", f"{msg.content[:200]}...", "  ")
                 else:
@@ -456,7 +456,7 @@ async def main():
         print()
 
         if denied > 0:
-            print("  Contracts enforced:")
+            print("  Rules enforced:")
             for e in events:
                 if e.get("action") == "call_denied":
                     print(f"    ⛔ {e.get('decision_name', '?')}: {e.get('reason', '')[:80]}")
@@ -482,7 +482,7 @@ async def main():
         print(f"  Est. cost:         ${total_cost:.4f}")
         print()
 
-    print("  The agent was non-deterministic. The governance was not.")
+    print("  The agent was non-deterministic. The checks were not.")
     print("=" * 70)
 
 

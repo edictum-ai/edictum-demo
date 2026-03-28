@@ -2,8 +2,8 @@
 Edictum OpenAI Agents SDK Adapter Demo
 =======================================
 
-Demonstrates Edictum governance using the OpenAI Agents SDK adapter.
-Exercises ALL contract types: pre/post/session/sandbox, deny/redact/warn/approve,
+Demonstrates Edictum behavior checks using the OpenAI Agents SDK adapter.
+Exercises ALL rule types: pre/post/session/sandbox, deny/redact/warn/approve,
 principal/RBAC, observe mode, tool classification, and console integration.
 
 Usage:
@@ -33,7 +33,7 @@ from shared_v2 import (  # noqa: E402
     send_email as _send_email,
     update_record as _update_record,
     delete_record as _delete_record,
-    CONTRACTS_PATH,
+    RULES_PATH,
     SCENARIOS,
     QUICK_SCENARIOS,
     create_console_guard,
@@ -54,12 +54,12 @@ async def main():
     principal = make_principal(args.role)
     scenarios = QUICK_SCENARIOS if args.quick else SCENARIOS
 
-    # ── Create governance guard ──────────────────────────────────────────
+    # ── Create behavior guard ──────────────────────────────────────────
     if args.console:
         guard = await create_console_guard(agent_id="edictum-openai-agents-agent")
     else:
         guard = Edictum.from_yaml(
-            str(CONTRACTS_PATH),
+            str(RULES_PATH),
             mode="observe" if args.mode == "observe" else None,
         )
     sink = get_local_sink(guard)
@@ -68,7 +68,7 @@ async def main():
     adapter = OpenAIAgentsAdapter(guard, principal=principal)
     input_gr, output_gr = adapter.as_guardrails()
 
-    # ── Define tools with governance guardrails ──────────────────────────
+    # ── Define tools with behavior guardrails ──────────────────────────
     @function_tool(tool_input_guardrails=[input_gr], tool_output_guardrails=[output_gr])
     def get_weather(city: str) -> str:
         """Get current weather for a city."""
