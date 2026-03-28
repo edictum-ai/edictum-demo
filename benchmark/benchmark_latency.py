@@ -94,7 +94,7 @@ TOOLS = [
 
 # --- YAML contracts (inline) ------------------------------------------------------
 
-CONTRACTS_YAML = """\
+RULES_YAML = """\
 apiVersion: edictum/v1
 kind: ContractBundle
 
@@ -182,7 +182,7 @@ SCENARIOS = [
 def write_temp_yaml() -> str:
     fd, path = tempfile.mkstemp(suffix=".yaml")
     with os.fdopen(fd, "w") as f:
-        f.write(CONTRACTS_YAML)
+        f.write(RULES_YAML)
     return path
 
 

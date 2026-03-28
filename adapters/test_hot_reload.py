@@ -66,7 +66,7 @@ NC = "\033[0m"
 
 # ── Contract YAML variants ───────────────────────────────────────────────
 
-CONTRACTS_V1 = """\
+RULES_V1 = """\
 apiVersion: edictum/v1
 kind: ContractBundle
 
@@ -107,7 +107,7 @@ contracts:
       tags: [dlp]
 """.format(bundle_name=BUNDLE_NAME)
 
-CONTRACTS_V2 = """\
+RULES_V2 = """\
 apiVersion: edictum/v1
 kind: ContractBundle
 
@@ -293,7 +293,7 @@ async def main():
 
         # ── Step 2: Upload & deploy V1 (email deny active) ───────────
         print(f"{CYAN}[2/9]{NC} Uploading contracts V1 (email deny active)...")
-        v1_resp = await console.upload_bundle(CONTRACTS_V1)
+        v1_resp = await console.upload_bundle(RULES_V1)
         v1_version = v1_resp["version"]
         print(f"  Uploaded: {BUNDLE_NAME} v{v1_version}")
 
@@ -342,7 +342,7 @@ async def main():
 
         # ── Step 5: Upload & deploy V2 (email deny REMOVED) ──────────
         print(f"{CYAN}[5/9]{NC} Uploading contracts V2 (email deny removed)...")
-        v2_resp = await console.upload_bundle(CONTRACTS_V2)
+        v2_resp = await console.upload_bundle(RULES_V2)
         v2_version = v2_resp["version"]
         print(f"  Uploaded: {BUNDLE_NAME} v{v2_version}")
 

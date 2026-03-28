@@ -8,7 +8,7 @@ Uses Python-based contracts (not YAML) with the plain OpenAI SDK via OpenRouter.
 
 | File | Description |
 |------|-------------|
-| `contracts.py` | Python-based governance contracts |
+| `rules.py` | Python-based governance contracts |
 | `demo_with.py` | Governed agent (enforce or observe mode) |
 | `demo_without.py` | Unguarded agent (the scary baseline) |
 
@@ -29,7 +29,7 @@ python scenarios/devops/demo_with.py --observe    # observe mode (log but don't 
 
 Requires `OPENROUTER_API_KEY` in `.env`.
 
-## Contracts
+## Rules
 
 | Contract | Type | What it does |
 |----------|------|-------------|
@@ -41,7 +41,7 @@ Requires `OPENROUTER_API_KEY` in `.env`.
 
 ## What it demonstrates
 
-- **Python contracts**: Governance defined in code with `@precondition`, `@postcondition`, `@session_contract` decorators
+- **Python rules**: Behavior defined in code with `@precondition`, `@postcondition`, `@session_contract` decorators
 - **Secret protection**: Agent is blocked from reading `.env` files containing credentials
 - **Blast radius limits**: Destructive commands (`rm -rf`) are denied; agent self-corrects to use `mv`
 - **Path confinement**: File moves are restricted to the target directory

@@ -10,7 +10,7 @@ Demonstrates Edictum governance for a customer support AI agent.
 - Ticket lifecycle: only senior agents and supervisors can close/resolve tickets
 - Session limits: caps on total tool calls and per-tool call limits
 
-## Contracts
+## Rules
 
 | Contract | Type | What it does |
 |----------|------|-------------|

@@ -106,7 +106,7 @@ async def main():
     # 2. Now import edictum (GovernanceTelemetry grabs tracer/meter at init)
     from shared_v2 import (
         CollectingAuditSink,
-        CONTRACTS_PATH,
+        RULES_PATH,
         make_principal,
         get_weather,
         read_file,
@@ -117,7 +117,7 @@ async def main():
 
     # 3. Create guard in enforce mode
     sink = CollectingAuditSink()
-    guard = Edictum.from_yaml(str(CONTRACTS_PATH), audit_sink=sink)
+    guard = Edictum.from_yaml(str(RULES_PATH), audit_sink=sink)
     principal = make_principal("analyst")
 
     # ── Scenario 1: Allow (weather lookup) ────────────────────────
@@ -158,7 +158,7 @@ async def main():
     section(5, "Observe — email to evil domain (observe-mode guard)")
     observe_sink = CollectingAuditSink()
     observe_guard = Edictum.from_yaml(
-        str(CONTRACTS_PATH), mode="observe", audit_sink=observe_sink,
+        str(RULES_PATH), mode="observe", audit_sink=observe_sink,
     )
     result = await observe_guard.run(
         "send_email",

@@ -6,7 +6,7 @@ Clinical trial pharmacovigilance agent governed by Edictum. Uses LangGraph's `cr
 
 | File | Description |
 |------|-------------|
-| `pharma_contracts.yaml` | YAML contract bundle (`edictum/v1`) |
+| `pharma_rules.yaml` | YAML contract bundle (`edictum/v1`) |
 | `pharma_agent.py` | CLI agent -- `LangChainAdapter` + `create_react_agent` |
 | `pharma_agent_unguarded.py` | Same agent, no governance (for comparison) |
 | `pharma_web_demo.py` | FastAPI + SSE real-time web UI |
@@ -28,7 +28,7 @@ python scenarios/pharma/pharma_web_demo.py
 # open http://localhost:8787
 ```
 
-## Contracts
+## Rules
 
 | Contract | Type | What it does |
 |----------|------|-------------|

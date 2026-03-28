@@ -21,9 +21,9 @@ Same agent. Same tools. Same scenarios. Three deployment stages:
 The benchmark proves: deploy B tomorrow with zero risk. Flip to C when confident.
 
 Usage:
-    python benchmark/prompt_vs_contracts.py               # all scenarios
-    python benchmark/prompt_vs_contracts.py --quick        # default scenario only
-    python benchmark/prompt_vs_contracts.py --runs 3       # repeat N times for non-determinism evidence
+    python benchmark/prompt_vs_rules.py               # all scenarios
+    python benchmark/prompt_vs_rules.py --quick        # default scenario only
+    python benchmark/prompt_vs_rules.py --runs 3       # repeat N times for non-determinism evidence
 """
 
 from __future__ import annotations
@@ -612,7 +612,7 @@ async def run_mode_b(task: str, verbose: bool = False) -> RunResult:
     sink = CollectingAuditSink()
     llm = ChatOpenAI(model="gpt-4.1", temperature=0.3)
 
-    contracts_path = Path(__file__).parent.parent / "scenarios" / "pharma" / "pharma_contracts.yaml"
+    contracts_path = Path(__file__).parent.parent / "scenarios" / "pharma" / "pharma_rules.yaml"
     guard = Edictum.from_yaml(str(contracts_path), mode="observe", audit_sink=sink)
 
     principal = Principal(
@@ -696,7 +696,7 @@ async def run_mode_c(task: str, verbose: bool = False) -> RunResult:
     sink = CollectingAuditSink()
     llm = ChatOpenAI(model="gpt-4.1", temperature=0.3)
 
-    contracts_path = Path(__file__).parent.parent / "scenarios" / "pharma" / "pharma_contracts.yaml"
+    contracts_path = Path(__file__).parent.parent / "scenarios" / "pharma" / "pharma_rules.yaml"
     guard = Edictum.from_yaml(str(contracts_path), mode="enforce", audit_sink=sink)
 
     principal = Principal(
