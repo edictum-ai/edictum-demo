@@ -60,7 +60,7 @@ audit event — typically 1-2 per tool call (pre-decision + post-execution).
 | `edictum.verdict` | string | `call_denied`, `call_allowed`, `call_executed`, `call_would_deny`, `call_approval_requested`, etc. |
 | `edictum.verdict.reason` | string | Human-readable reason |
 | `edictum.decision.source` | string | `precondition`, `sandbox`, `postcondition`, `session`, `hook` |
-| `edictum.decision.name` | string | Name of the deciding contract/hook |
+| `edictum.decision.name` | string | Name of the deciding rule/hook |
 | `edictum.side_effect` | string | Tool classification |
 | `edictum.environment` | string | Execution environment |
 | `edictum.mode` | string | `enforce` or `observe` |

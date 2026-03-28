@@ -42,7 +42,7 @@ class CollectingSink(AuditSink):
 
 CONTRACTS_YAML = """\
 apiVersion: edictum/v1
-kind: ContractBundle
+kind: Ruleset
 metadata:
   name: benchmark
 defaults:
@@ -54,7 +54,7 @@ tools:
     side_effect: irreversible
   delete_record:
     side_effect: irreversible
-contracts:
+rules:
   - id: block-evil-email
     type: pre
     tool: send_email

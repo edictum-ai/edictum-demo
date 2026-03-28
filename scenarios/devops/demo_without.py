@@ -133,7 +133,7 @@ def run_agent():
             print("\n  Agent finished.\n")
             break
 
-        # Process each tool call — NO guard, NO contracts, NO audit
+        # Process each tool call — NO guard, NO rules, NO audit
         for tc in message.tool_calls:
             tool_name = tc.function.name
             tool_args = json.loads(tc.function.arguments)

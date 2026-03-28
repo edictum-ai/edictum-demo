@@ -224,7 +224,7 @@ async def run_unguarded(task: str, label: str = ""):
 
     print(f"\n{'=' * 70}")
     print(f"  UNGUARDED AGENT -- {label}")
-    print(f"  No Edictum. No contracts. No audit trail.")
+    print(f"  No Edictum. No rules. No audit trail.")
     print(f"{'=' * 70}")
     print(f"\n  TASK: {task}\n")
 
@@ -404,7 +404,7 @@ async def main():
             ])
             print(f"  {test_name}: {total} violations, 0 audit events")
         print(f"\n  Without Edictum: the agent does whatever the LLM decides.")
-        print(f"  With Edictum: deterministic contracts, every decision logged.")
+        print(f"  With Edictum: deterministic rules, every decision logged.")
         print(f"{'=' * 70}")
 
 

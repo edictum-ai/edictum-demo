@@ -1,4 +1,4 @@
-"""Shared contracts for the file organizer demo.
+"""Shared rules for the file organizer demo.
 
 Used by demo_with.py (and examples/demo_sdk.py) to govern tool calls.
 demo_without.py intentionally skips these to show what happens without
@@ -7,12 +7,12 @@ governance.
 These demonstrate Edictum's governance primitives:
 - Built-in preconditions (deny_sensitive_reads)
 - Custom preconditions (no_destructive_commands, require_target_dir)
-- Session contracts (limit_total_operations)
+- Session rules (limit_total_operations)
 - Postconditions (check_bash_errors)
 """
 
-from edictum import Verdict, deny_sensitive_reads, precondition, session_contract
-from edictum.contracts import postcondition
+from edictum import Verdict, deny_sensitive_reads, precondition, session_rule
+from edictum.rules import postcondition
 
 
 # --- Built-in precondition ---
@@ -71,9 +71,9 @@ def make_require_target_dir(base="/tmp/", organized="organized"):
 require_target_dir = make_require_target_dir()
 
 
-# --- Session contract ---
+# --- Session rule ---
 
-@session_contract
+@session_rule
 async def limit_total_operations(session):
     """Cap total tool executions to prevent runaway agents."""
     count = await session.execution_count()

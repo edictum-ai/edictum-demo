@@ -1,7 +1,7 @@
 """File Organizer Demo — Claude Agent SDK + Edictum adapter.
 
 Shows Edictum integrated with the Claude Agent SDK via hooks.
-Same contracts, full audit trail, OTel — the adapter intercepts
+Same rules, full audit trail, OTel — the adapter intercepts
 every tool call for governance.
 
 Note: The Claude Agent SDK sandboxes Bash to the working directory,
@@ -37,7 +37,7 @@ from edictum import Edictum, OperationLimits
 from edictum.adapters.claude_agent_sdk import ClaudeAgentSDKAdapter
 from edictum.audit import FileAuditSink, RedactionPolicy
 
-from devops.contracts import (
+from devops.rules import (
     check_bash_errors,
     limit_total_operations,
     make_require_target_dir,
@@ -308,7 +308,7 @@ def main():
     redaction = RedactionPolicy()
     guard = Edictum(
         mode=mode,
-        contracts=[
+        rules=[
             sensitive_reads,
             no_destructive_commands,
             require_target_dir,

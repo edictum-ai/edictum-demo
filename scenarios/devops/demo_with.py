@@ -1,7 +1,7 @@
 """File Organizer Demo — WITH Edictum.
 
 Same agent, same prompt, same LLM as demo_without.py — but every tool
-call goes through guard.run(). Edictum enforces contracts, logs an
+call goes through guard.run(). Edictum enforces rules, logs an
 audit trail, and emits OTel traces+metrics. When a call is denied the
 LLM reads the denial reason and self-corrects.
 
@@ -30,7 +30,7 @@ from openai import OpenAI
 from edictum import Edictum, EdictumDenied, OperationLimits
 from edictum.audit import FileAuditSink, RedactionPolicy
 
-from contracts import (
+from rules import (
     check_bash_errors,
     limit_total_operations,
     no_destructive_commands,
@@ -204,7 +204,7 @@ def main():
     redaction = RedactionPolicy()
     guard = Edictum(
         mode=mode,
-        contracts=[
+        rules=[
             sensitive_reads,
             no_destructive_commands,
             require_target_dir,

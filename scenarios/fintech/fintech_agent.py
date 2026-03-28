@@ -223,8 +223,8 @@ def search_market_data(query: str) -> str:
 def redact_pii(text: str) -> str:
     """Replace PII patterns with redaction markers.
 
-    These match the same patterns as the postcondition contracts in
-    fintech_contracts.yaml, so redaction fires exactly when postconditions warn.
+    These match the same patterns as the postcondition rules in
+    fintech_rules.yaml, so redaction fires exactly when postconditions warn.
     """
     text = re.sub(r'\b\d{3}-\d{2}-\d{4}\b', '[SSN/EIN REDACTED]', text)
     text = re.sub(r'\bACC-\d{6,10}\b', '[ACCOUNT-ID REDACTED]', text)
@@ -343,11 +343,11 @@ async def main():
     if Path(audit_path).exists():
         Path(audit_path).unlink()
 
-    contracts_path = Path(__file__).parent / "fintech_contracts.yaml"
+    rules_path = Path(__file__).parent / "fintech_rules.yaml"
     mode = "observe" if args.mode == "observe" else None
     audit_sink = FileAuditSink(audit_path)
     guard = Edictum.from_yaml(
-        str(contracts_path),
+        str(rules_path),
         mode=mode,
         audit_sink=audit_sink,
     )
@@ -377,7 +377,7 @@ async def main():
     # Banner
     print("=" * 70)
     print("  EDICTUM FINTECH AGENT DEMO")
-    print("  Runtime contracts for AI agents in trading compliance")
+    print("  Runtime rules for AI agents in trading compliance")
     print("=" * 70)
 
     print_header(f"TASK: {task}")
@@ -456,7 +456,7 @@ async def main():
         print()
 
         if denied > 0:
-            print("  Contracts enforced:")
+            print("  Rules enforced:")
             for e in events:
                 if e.get("action") == "call_denied":
                     print(f"    ⛔ {e.get('decision_name', '?')}: {e.get('reason', '')[:80]}")

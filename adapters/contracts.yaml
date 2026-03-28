@@ -1,5 +1,5 @@
 apiVersion: edictum/v1
-kind: ContractBundle
+kind: Ruleset
 
 metadata:
   name: edictum-adapter-demos
@@ -14,20 +14,20 @@ defaults:
 # ── Tool side-effect classifications ──────────────────────────────
 tools:
   get_weather:
-    side_effect: pure
+    side_action: pure
     idempotent: true
   search_web:
-    side_effect: read
+    side_action: read
   read_file:
-    side_effect: read
+    side_action: read
   send_email:
-    side_effect: irreversible
+    side_action: irreversible
   update_record:
-    side_effect: write
+    side_action: write
   delete_record:
-    side_effect: irreversible
+    side_action: irreversible
 
-contracts:
+rules:
   # ── PRE: Deny emails to known-bad domains ─────────────────────
   - id: no-email-to-external
     type: pre
@@ -36,7 +36,7 @@ contracts:
       args.to:
         contains_any: ["@evil.com", "@attacker.com", "@malicious.com", "@external.org"]
     then:
-      effect: deny
+      action: block
       message: "Denied: emails to untrusted domain blocked. Recipient: '{args.to}'"
       tags: [dlp, email]
 
@@ -48,7 +48,7 @@ contracts:
       args.path:
         contains_any: ["/etc/passwd", "/etc/shadow", ".env", "secrets", "credentials"]
     then:
-      effect: deny
+      action: block
       message: "Denied: access to sensitive file '{args.path}'"
       tags: [dlp, filesystem]
 
@@ -60,7 +60,7 @@ contracts:
       principal.role:
         not_in: [admin, superadmin]
     then:
-      effect: deny
+      action: block
       message: "Delete operations require admin role. Your role: {principal.role}"
       tags: [access-control, rbac]
 
@@ -72,11 +72,11 @@ contracts:
       args.confirmed:
         not_equals: true
     then:
-      effect: approve
+      action: ask
       message: "Record update requires human approval: {args.record_id}"
       tags: [hitl, change-control]
       timeout: 30
-      timeout_effect: deny
+      timeout_action: block
 
   # ── PRE: Observe-mode audit logging (never blocks) ────────────
   - id: audit-all-emails
@@ -87,7 +87,7 @@ contracts:
       args.to:
         exists: true
     then:
-      effect: deny
+      action: block
       message: "Audit: email to '{args.to}' with subject '{args.subject}'"
       tags: [audit, email, observe]
 
@@ -102,7 +102,7 @@ contracts:
           - '\b[A-Za-z0-9._%+-]+@[A-Za-z0-9.-]+\.[A-Z|a-z]{2,}\b'  # Email
           - '\b(\+1[\s.-]?)?\(?\d{3}\)?[\s.-]?\d{3}[\s.-]?\d{4}\b'  # US phone
     then:
-      effect: redact
+      action: redact
       message: "PII detected in output — redacted"
       tags: [pii, gdpr, hipaa]
 
@@ -114,7 +114,7 @@ contracts:
       output.text:
         contains_any: ["Permission denied", "No such file", "Error:"]
     then:
-      effect: warn
+      action: warn
       message: "File operation returned an error"
       tags: [reliability]
 
@@ -129,7 +129,7 @@ contracts:
           - 'ghp_[a-zA-Z0-9]{36}'     # GitHub PAT
           - 'AKIA[0-9A-Z]{16}'        # AWS access key
     then:
-      effect: deny
+      action: block
       message: "Credential/secret detected in output — suppressed"
       tags: [dlp, secrets]
 
@@ -147,7 +147,7 @@ contracts:
       max_calls_per_tool:
         get_weather: 5
     then:
-      effect: deny
+      action: block
       message: "Rate limit: max 5 weather lookups per session"
       tags: [rate-limit]
 
@@ -157,6 +157,6 @@ contracts:
     limits:
       max_tool_calls: 25
     then:
-      effect: deny
+      action: block
       message: "Session limit: max 25 tool calls per session"
       tags: [rate-limit, operational-safety]

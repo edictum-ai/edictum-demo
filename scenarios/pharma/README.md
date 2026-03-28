@@ -1,12 +1,12 @@
 # Pharmacovigilance Scenario
 
-Clinical trial pharmacovigilance agent governed by Edictum. Uses LangGraph's `create_react_agent` with `ToolNode(wrap_tool_call=adapter.as_tool_wrapper())` for governance integration. Demonstrates HIPAA/PII protection, role-based access, change control, audit trails, and regulatory compliance contracts.
+Clinical trial pharmacovigilance agent governed by Edictum. Uses LangGraph's `create_react_agent` with `ToolNode(wrap_tool_call=adapter.as_tool_wrapper())` for governance integration. Demonstrates HIPAA/PII protection, role-based access, change control, audit trails, and regulatory compliance rules.
 
 ## Files
 
 | File | Description |
 |------|-------------|
-| `pharma_contracts.yaml` | YAML contract bundle (`edictum/v1`) |
+| `pharma_rules.yaml` | YAML rule bundle (`edictum/v1`) |
 | `pharma_agent.py` | CLI agent -- `LangChainAdapter` + `create_react_agent` |
 | `pharma_agent_unguarded.py` | Same agent, no governance (for comparison) |
 | `pharma_web_demo.py` | FastAPI + SSE real-time web UI |

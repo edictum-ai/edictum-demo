@@ -200,8 +200,8 @@ def detect_pii(text: str) -> list[str]:
 def redact_pii(text: str) -> str:
     """Replace PII patterns with redaction markers.
 
-    These match the same patterns as the postcondition contracts in
-    pharma_contracts.yaml, so redaction fires exactly when postconditions warn.
+    These match the same patterns as the postcondition rules in
+    pharma_rules.yaml, so redaction fires exactly when postconditions warn.
     """
     text = re.sub(r'\b\d{3}-\d{2}-\d{4}\b', '[SSN REDACTED]', text)
     text = re.sub(r'\bPAT-\d{4,8}\b', '[PATIENT-ID REDACTED]', text)
@@ -227,10 +227,10 @@ async def run_agent_streaming(role: str, ticket: str, task: str):
     audit_fd, audit_path = tempfile.mkstemp(suffix=".jsonl")
     os.close(audit_fd)
 
-    contracts_path = Path(__file__).parent / "pharma_contracts.yaml"
+    rules_path = Path(__file__).parent / "pharma_rules.yaml"
     audit_sink = FileAuditSink(audit_path)
     guard = Edictum.from_yaml(
-        str(contracts_path),
+        str(rules_path),
         audit_sink=audit_sink,
     )
 

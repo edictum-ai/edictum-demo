@@ -92,15 +92,15 @@ TOOLS = [
 ]
 
 
-# --- YAML contracts (inline) ------------------------------------------------------
+# --- YAML rules (inline) ------------------------------------------------------
 
 CONTRACTS_YAML = """\
 apiVersion: edictum/v1
-kind: ContractBundle
+kind: Ruleset
 
 metadata:
-  name: benchmark-contracts
-  description: Inline contracts for latency benchmarking
+  name: benchmark-rules
+  description: Inline rules for latency benchmarking
 
 defaults:
   mode: enforce
@@ -108,7 +108,7 @@ defaults:
 observability:
   stdout: false
 
-contracts:
+rules:
   - id: restrict-patient-data
     type: pre
     tool: query_clinical_data

@@ -33,7 +33,7 @@ governance is **0.009% of total latency**.
 End-to-end latency measurement with real OpenAI API calls. Measures 4 phases:
 
 1. **Baseline** -- direct tool call (no LLM, no governance)
-2. **Governance only** -- Edictum contract evaluation without LLM
+2. **Governance only** -- Edictum rule evaluation without LLM
 3. **LLM only** -- OpenAI API call without governance
 4. **End-to-end** -- full agent loop with LLM + governance
 
@@ -43,18 +43,18 @@ python benchmark/benchmark_latency.py
 
 **Latest results:** ~43us governance overhead = 0.009% of a typical LLM round-trip.
 
-## prompt_vs_contracts.py
+## prompt_vs_rules.py
 
 A -> B -> C customer journey benchmark comparing three deployment stages:
 
 - **A (Today)**: Bloated system prompt with governance rules in natural language. LLM self-polices.
 - **B (Day-one)**: Clean prompt, Edictum in observe mode. Full visibility, zero behavior change.
-- **C (Production)**: Clean prompt, Edictum in enforce mode. Deterministic contract enforcement.
+- **C (Production)**: Clean prompt, Edictum in enforce mode. Deterministic rule enforcement.
 
 ```bash
-python benchmark/prompt_vs_contracts.py               # all scenarios
-python benchmark/prompt_vs_contracts.py --quick        # default scenario only
-python benchmark/prompt_vs_contracts.py --runs 3       # repeat for non-determinism evidence
+python benchmark/prompt_vs_rules.py               # all scenarios
+python benchmark/prompt_vs_rules.py --quick        # default scenario only
+python benchmark/prompt_vs_rules.py --runs 3       # repeat for non-determinism evidence
 ```
 
 Requires `OPENAI_API_KEY` in `.env`.
@@ -63,5 +63,5 @@ Requires `OPENAI_API_KEY` in `.env`.
 
 1. **Zero overhead** -- ~43us per tool call across all 8 adapters, 0.009% of LLM latency
 2. **No adapter penalty** -- all adapters converge to the same ~43us; the framework integration layer is free
-3. **Contracts are deterministic** -- same input always produces the same governance decision, unlike prompt engineering
+3. **Rules are deterministic** -- same input always produces the same governance decision, unlike prompt engineering
 4. **Deploy observe mode tomorrow** -- zero risk, full audit trail, then flip to enforce when confident

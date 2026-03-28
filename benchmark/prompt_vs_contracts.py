@@ -10,20 +10,20 @@ Same agent. Same tools. Same scenarios. Three deployment stages:
 
   B) DAY-ONE DEPLOYMENT (Edictum Observe)
      Clean, task-focused prompt. Edictum runs in observe mode — every tool call
-     is evaluated against contracts, logged with full audit trail, but nothing
+     is evaluated against rules, logged with full audit trail, but nothing
      is blocked. Zero behavior change, full visibility.
 
   C) PRODUCTION (Edictum Enforce)
      Same clean prompt. Edictum switches to enforce mode — tool calls that violate
-     contracts are deterministically denied. Postcondition-aware redaction prevents
+     rules are deterministically denied. Postcondition-aware redaction prevents
      PII from reaching the LLM.
 
 The benchmark proves: deploy B tomorrow with zero risk. Flip to C when confident.
 
 Usage:
-    python benchmark/prompt_vs_contracts.py               # all scenarios
-    python benchmark/prompt_vs_contracts.py --quick        # default scenario only
-    python benchmark/prompt_vs_contracts.py --runs 3       # repeat N times for non-determinism evidence
+    python benchmark/prompt_vs_rules.py               # all scenarios
+    python benchmark/prompt_vs_rules.py --quick        # default scenario only
+    python benchmark/prompt_vs_rules.py --runs 3       # repeat N times for non-determinism evidence
 """
 
 from __future__ import annotations
@@ -612,8 +612,8 @@ async def run_mode_b(task: str, verbose: bool = False) -> RunResult:
     sink = CollectingAuditSink()
     llm = ChatOpenAI(model="gpt-4.1", temperature=0.3)
 
-    contracts_path = Path(__file__).parent.parent / "scenarios" / "pharma" / "pharma_contracts.yaml"
-    guard = Edictum.from_yaml(str(contracts_path), mode="observe", audit_sink=sink)
+    rules_path = Path(__file__).parent.parent / "scenarios" / "pharma" / "pharma_rules.yaml"
+    guard = Edictum.from_yaml(str(rules_path), mode="observe", audit_sink=sink)
 
     principal = Principal(
         user_id="demo-pharmacovigilance",
@@ -696,8 +696,8 @@ async def run_mode_c(task: str, verbose: bool = False) -> RunResult:
     sink = CollectingAuditSink()
     llm = ChatOpenAI(model="gpt-4.1", temperature=0.3)
 
-    contracts_path = Path(__file__).parent.parent / "scenarios" / "pharma" / "pharma_contracts.yaml"
-    guard = Edictum.from_yaml(str(contracts_path), mode="enforce", audit_sink=sink)
+    rules_path = Path(__file__).parent.parent / "scenarios" / "pharma" / "pharma_rules.yaml"
+    guard = Edictum.from_yaml(str(rules_path), mode="enforce", audit_sink=sink)
 
     principal = Principal(
         user_id="demo-pharmacovigilance",
@@ -753,7 +753,7 @@ async def run_mode_c(task: str, verbose: bool = False) -> RunResult:
                 redacted = exec_event and not exec_event.postconditions_passed
                 if redacted:
                     warnings = [
-                        c["message"] for c in exec_event.contracts_evaluated
+                        c["message"] for c in exec_event.rules_evaluated
                         if not c["passed"]
                     ]
                     tool_result = f"[REDACTED] {'; '.join(warnings)}"

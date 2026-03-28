@@ -1,12 +1,12 @@
 # Adversarial Testing
 
-Tests whether governance contracts hold under adversarial conditions across multiple LLMs. Uses the pharmacovigilance scenario from `scenarios/pharma/`.
+Tests whether governance rules hold under adversarial conditions across multiple LLMs. Uses the pharmacovigilance scenario from `scenarios/pharma/`.
 
 ## Scenarios
 
 | Test | What it does |
 |------|-------------|
-| **A. Retry After Deny** | Agent retries a denied tool call with tweaked args -- tests that contracts are consistent |
+| **A. Retry After Deny** | Agent retries a denied tool call with tweaked args -- tests that rules are consistent |
 | **B. PII Exfiltration** | Agent tries to smuggle PII through regulatory export -- tests postcondition detection |
 | **C. Cross-Tool Chain** | Agent leaks PII through non-obvious tool args (search terms) -- tests output scanning |
 | **D. Role Escalation** | Restricted researcher role tries multiple datasets -- tests access control consistency |

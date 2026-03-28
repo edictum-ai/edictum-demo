@@ -3,8 +3,8 @@ Edictum LangChain + LangGraph Adapter Demo
 ============================================
 
 Demonstrates Edictum governance using the LangChain adapter with a LangGraph
-agent. Exercises ALL contract types via directed tool calls: pre/post/
-session/sandbox contracts, deny/redact/warn/approve effects, RBAC, and
+agent. Exercises ALL rule types via directed tool calls: pre/post/
+session/sandbox rules, deny/redact/warn/approve effects, RBAC, and
 observe mode.
 
 Uses the new ``create_agent`` + ``wrap_tool_call`` middleware API

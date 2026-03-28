@@ -3,8 +3,8 @@ Edictum Google ADK Adapter Demo
 ================================
 
 Demonstrates Edictum governance using the Google ADK adapter with plugin-based
-integration. Exercises ALL contract types via directed tool calls: pre/post/
-session/sandbox contracts, deny/redact/warn/approve effects, RBAC, and observe mode.
+integration. Exercises ALL rule types via directed tool calls: pre/post/
+session/sandbox rules, deny/redact/warn/approve effects, RBAC, and observe mode.
 
 Two integration paths are shown:
   - **Plugin path** (default): ``adapter.as_plugin()`` for Runner(plugins=[...]).

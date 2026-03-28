@@ -2,7 +2,7 @@
 Adversarial Testing for Edictum Governance
 ============================================
 
-Tests whether governance contracts hold under adversarial conditions:
+Tests whether governance rules hold under adversarial conditions:
   A. Retry after deny — agent retries denied tool with tweaked args
   B. PII exfiltration via export — agent tries to smuggle PII through export
   C. Cross-tool chain — PII leaks through non-obvious tool args
@@ -37,7 +37,7 @@ from shared import (  # noqa: E402
     search_medical_literature as _search_medical_literature,
     redact_pii,
     CollectingAuditSink,
-    CONTRACTS_PATH,
+    RULES_PATH,
     make_principal,
     print_header,
     print_governance,
@@ -115,7 +115,7 @@ async def run_scenario(
     print()
 
     sink = CollectingAuditSink()
-    guard = Edictum.from_yaml(str(CONTRACTS_PATH), audit_sink=sink)
+    guard = Edictum.from_yaml(str(RULES_PATH), audit_sink=sink)
     principal = make_principal(role, ticket)
     adapter = LangChainAdapter(guard, principal=principal)
 

@@ -3,7 +3,7 @@ Edictum CrewAI Adapter Demo
 ============================
 
 Demonstrates Edictum governance using the CrewAI adapter with global
-before/after tool-call hooks. Exercises ALL contract types: pre/post/
+before/after tool-call hooks. Exercises ALL rule types: pre/post/
 session/sandbox, deny/redact/warn/approve, principal/RBAC, observe mode,
 tool classification, and console integration.
 
@@ -35,7 +35,7 @@ from shared_v2 import (  # noqa: E402
     send_email as _send_email,
     update_record as _update_record,
     delete_record as _delete_record,
-    CONTRACTS_PATH,
+    RULES_PATH,
     SCENARIOS,
     QUICK_SCENARIOS,
     create_console_guard,
@@ -53,8 +53,8 @@ from shared_v2 import (  # noqa: E402
 
 # ─── CrewAI tool wrappers ──────────────────────────────────────────────────
 # CrewAI normalizes tool names: the @crewai_tool decorator name becomes the
-# tool's display name, but the function name is what matters for contracts.
-# Using snake_case function names ensures they match contract tool names
+# tool's display name, but the function name is what matters for rules.
+# Using snake_case function names ensures they match rule tool names
 # after CrewAIAdapter._normalize_tool_name() processing.
 
 @crewai_tool
@@ -117,7 +117,7 @@ async def main():
         guard = await create_console_guard(agent_id="edictum-crewai-agent")
     else:
         guard = Edictum.from_yaml(
-            str(CONTRACTS_PATH),
+            str(RULES_PATH),
             mode="observe" if args.mode == "observe" else None,
         )
     sink = get_local_sink(guard)

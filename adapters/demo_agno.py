@@ -3,8 +3,8 @@ Edictum Agno Adapter Demo
 ==========================
 
 Demonstrates Edictum governance using the Agno adapter with an Agno Agent.
-Exercises ALL contract types via directed tool calls: pre/post/session/sandbox
-contracts, deny/redact/warn/approve effects, RBAC, and observe mode.
+Exercises ALL rule types via directed tool calls: pre/post/session/sandbox
+rules, deny/redact/warn/approve effects, RBAC, and observe mode.
 
 Usage:
     python adapters/demo_agno.py

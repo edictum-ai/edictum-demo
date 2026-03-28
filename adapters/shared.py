@@ -41,7 +41,7 @@ def teardown_otel():
 
 # ─── Paths ──────────────────────────────────────────────────────────────────
 
-CONTRACTS_PATH = Path(__file__).parent.parent / "scenarios" / "pharma" / "pharma_contracts.yaml"
+RULES_PATH = Path(__file__).parent.parent / "scenarios" / "pharma" / "pharma_rules.yaml"
 
 
 # ─── Mock clinical databases ───────────────────────────────────────────────
@@ -169,7 +169,7 @@ def redact_pii(text: str) -> str:
 
     Regex-based PII detection is a baseline. Production deployments should
     use ML-based PII scanners (Presidio, Phileas, etc.) behind the same
-    postcondition contract interface.
+    postcondition rule interface.
     """
     text = re.sub(r'\b\d{3}-\d{2}-\d{4}\b', '[SSN REDACTED]', text)
     text = re.sub(r'\bPAT-\d{4,8}\b', '[PATIENT-ID REDACTED]', text)
@@ -253,7 +253,7 @@ def print_banner(adapter_name: str, principal: Principal, mode: str):
     print("=" * 70)
     print_event("Principal", f"{principal.user_id} (role: {principal.role}, ticket: {principal.ticket_ref or 'none'})")
     print_event("Mode", mode)
-    print_event("Contracts", str(CONTRACTS_PATH))
+    print_event("Contracts", str(RULES_PATH))
     print()
 
 
@@ -305,7 +305,7 @@ def print_audit_summary(sink: CollectingAuditSink):
     print()
 
     if denied > 0:
-        print("  Contracts enforced:")
+        print("  Rules enforced:")
         for e in sink.filter(AuditAction.CALL_DENIED):
             reason = getattr(e, 'reason', '') or ''
             decision = getattr(e, 'decision_name', '') or ''

@@ -234,8 +234,8 @@ def escalate_ticket(ticket_id: str, reason: str = "") -> str:
 def redact_pii(text: str) -> str:
     """Replace PII patterns with redaction markers.
 
-    These match the same patterns as the postcondition contracts in
-    support_contracts.yaml, so redaction fires exactly when postconditions warn.
+    These match the same patterns as the postcondition rules in
+    support_rules.yaml, so redaction fires exactly when postconditions warn.
     """
     text = re.sub(r'\b[A-Za-z0-9._%+-]+@[A-Za-z0-9.-]+\.[A-Z|a-z]{2,}\b', '[EMAIL REDACTED]', text)
     text = re.sub(r'\b(\+1[\s.-]?)?\(?\d{3}\)?[\s.-]?\d{3}[\s.-]?\d{4}\b', '[PHONE REDACTED]', text)
@@ -351,11 +351,11 @@ async def main():
     if Path(audit_path).exists():
         Path(audit_path).unlink()
 
-    contracts_path = Path(__file__).parent / "support_contracts.yaml"
+    rules_path = Path(__file__).parent / "support_rules.yaml"
     mode = "observe" if args.mode == "observe" else None
     audit_sink = FileAuditSink(audit_path)
     guard = Edictum.from_yaml(
-        str(contracts_path),
+        str(rules_path),
         mode=mode,
         audit_sink=audit_sink,
     )
@@ -384,7 +384,7 @@ async def main():
     # Banner
     print("=" * 70)
     print("  EDICTUM CUSTOMER SUPPORT AGENT DEMO")
-    print("  Runtime contracts for AI agents in customer support")
+    print("  Runtime rules for AI agents in customer support")
     print("=" * 70)
 
     print_header(f"TASK: {task}")
@@ -463,7 +463,7 @@ async def main():
         print()
 
         if denied > 0:
-            print("  Contracts enforced:")
+            print("  Rules enforced:")
             for e in events:
                 if e.get("action") == "call_denied":
                     print(f"    ⛔ {e.get('decision_name', '?')}: {e.get('reason', '')[:80]}")

@@ -1,7 +1,7 @@
 # Edictum Demo Repository
 
 Full scenario demos, adversarial tests, benchmarks, and observability setup for
-[Edictum](https://github.com/edictum-ai/edictum) -- runtime contracts for AI agents.
+[Edictum](https://github.com/edictum-ai/edictum) -- runtime rules for AI agents.
 
 **Docs:** [docs.edictum.ai](https://docs.edictum.ai)
 **PyPI:** [pypi.org/project/edictum](https://pypi.org/project/edictum/)
@@ -23,7 +23,7 @@ Each scenario includes a governed agent AND an unguarded baseline for comparison
 
 ### Framework Adapters
 
-Same governance contracts, 8 different agent frameworks. Proves Edictum is framework-agnostic.
+Same governance rules, 8 different agent frameworks. Proves Edictum is framework-agnostic.
 
 | Framework | Demo | Adapter API |
 |-----------|------|-------------|
@@ -38,7 +38,7 @@ Same governance contracts, 8 different agent frameworks. Proves Edictum is frame
 
 ### Hot Reload Test
 
-Validates that contract changes deployed via the console reach connected agents in
+Validates that rule changes deployed via the console reach connected agents in
 real-time via SSE -- no agent restart needed. Fast, deterministic, no LLM calls.
 
 ```bash
@@ -61,7 +61,7 @@ python adversarial/test_adversarial.py --model qwen
 ```bash
 python benchmark/benchmark_adapters.py         # Per-adapter overhead: ~43us across all 8
 python benchmark/benchmark_latency.py          # End-to-end with real LLM calls
-python benchmark/prompt_vs_contracts.py         # Prompt engineering vs contracts
+python benchmark/prompt_vs_rules.py         # Prompt engineering vs rules
 ```
 
 ### Observability
@@ -119,7 +119,7 @@ edictum-demo/
     customer-support/           # Support agent with data minimization
   adapters/                     # 8 framework comparison demos
   adversarial/                  # Multi-model adversarial tests
-  benchmark/                    # Adapter overhead + latency + prompt-vs-contracts
+  benchmark/                    # Adapter overhead + latency + prompt-vs-rules
   observability/                # OTel config + Grafana dashboard
   docs/                         # Adapter development insights
   examples/                     # Claude Agent SDK demo

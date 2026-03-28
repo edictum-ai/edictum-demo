@@ -3,7 +3,7 @@ Edictum OpenAI Agents SDK Adapter Demo
 =======================================
 
 Demonstrates Edictum governance using the OpenAI Agents SDK adapter.
-Exercises ALL contract types: pre/post/session/sandbox, deny/redact/warn/approve,
+Exercises ALL rule types: pre/post/session/sandbox, deny/redact/warn/approve,
 principal/RBAC, observe mode, tool classification, and console integration.
 
 Usage:
@@ -33,7 +33,7 @@ from shared_v2 import (  # noqa: E402
     send_email as _send_email,
     update_record as _update_record,
     delete_record as _delete_record,
-    CONTRACTS_PATH,
+    RULES_PATH,
     SCENARIOS,
     QUICK_SCENARIOS,
     create_console_guard,
@@ -59,7 +59,7 @@ async def main():
         guard = await create_console_guard(agent_id="edictum-openai-agents-agent")
     else:
         guard = Edictum.from_yaml(
-            str(CONTRACTS_PATH),
+            str(RULES_PATH),
             mode="observe" if args.mode == "observe" else None,
         )
     sink = get_local_sink(guard)
