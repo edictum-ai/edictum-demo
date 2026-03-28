@@ -11,7 +11,7 @@ Demonstrates Edictum governance for a trading desk AI agent.
 - **PII detection in financial data** -- SSN/EIN, account numbers, emails, phones redacted
 - **Session rate limiting** -- caps on total tool calls and per-tool limits
 
-## Contracts
+## Rules
 
 | Contract | Type | What it does |
 |----------|------|--------------|

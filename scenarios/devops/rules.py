@@ -1,18 +1,18 @@
-"""Shared contracts for the file organizer demo.
+"""Shared rules for the file organizer demo.
 
 Used by demo_with.py (and examples/demo_sdk.py) to govern tool calls.
 demo_without.py intentionally skips these to show what happens without
-governance.
+behavior checks.
 
-These demonstrate Edictum's governance primitives:
+These demonstrate Edictum's behavior primitives:
 - Built-in preconditions (deny_sensitive_reads)
 - Custom preconditions (no_destructive_commands, require_target_dir)
-- Session contracts (limit_total_operations)
+- Session rules (limit_total_operations)
 - Postconditions (check_bash_errors)
 """
 
-from edictum import Verdict, deny_sensitive_reads, precondition, session_contract
-from edictum.contracts import postcondition
+from edictum import Decision, deny_sensitive_reads, precondition, session_contract
+from edictum.rules import postcondition
 
 
 # --- Built-in precondition ---
@@ -33,12 +33,12 @@ def no_destructive_commands(envelope):
     for line in cmd.splitlines():
         line = line.strip()
         if any(line.startswith(d) for d in destructive) or line == "rm":
-            return Verdict.fail(
+            return Decision.fail(
                 f"Destructive command blocked: '{line.split()[0]}'. "
                 "Use 'mv' to reorganize files instead of deleting them. "
                 "If cleanup is needed, move files to /tmp/trash/ first."
             )
-    return Verdict.pass_()
+    return Decision.pass_()
 
 
 def make_require_target_dir(base="/tmp/", organized="organized"):
@@ -57,13 +57,13 @@ def make_require_target_dir(base="/tmp/", organized="organized"):
             if len(parts) >= 3:
                 target = parts[-1]
                 if not target.startswith(base):
-                    return Verdict.fail(
+                    return Decision.fail(
                         f"Move target '{target}' is outside '{base}'. "
                         f"All organized files must go under {base}{organized}/. "
                         f"Create subdirectories like {base}{organized}/code/, "
                         f"{base}{organized}/docs/, {base}{organized}/data/."
                     )
-        return Verdict.pass_()
+        return Decision.pass_()
 
     return require_target_dir
 
@@ -71,18 +71,18 @@ def make_require_target_dir(base="/tmp/", organized="organized"):
 require_target_dir = make_require_target_dir()
 
 
-# --- Session contract ---
+# --- Session rule ---
 
 @session_contract
 async def limit_total_operations(session):
     """Cap total tool executions to prevent runaway agents."""
     count = await session.execution_count()
     if count >= 25:
-        return Verdict.fail(
+        return Decision.fail(
             "Operation limit reached (25 tool calls). "
             "Summarize what you've organized so far and stop."
         )
-    return Verdict.pass_()
+    return Decision.pass_()
 
 
 # --- Postcondition (observe-only in v0.0.1) ---
@@ -92,7 +92,7 @@ def check_bash_errors(envelope, result):
     """Warn if a bash command returned an error."""
     if isinstance(result, str):
         if "No such file" in result or "Permission denied" in result:
-            return Verdict.fail(
+            return Decision.fail(
                 f"Command may have failed: {result[:200]}"
             )
-    return Verdict.pass_()
+    return Decision.pass_()

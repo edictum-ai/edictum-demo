@@ -2,7 +2,7 @@
 
 Same governance contracts, 8 different agent frameworks. Proves Edictum is framework-agnostic.
 
-All demos use shared mock tools and contracts (`shared_v2.py`, `contracts.yaml`) that exercise
+All demos use shared mock tools and contracts (`shared_v2.py`, `rules.yaml`) that exercise
 all edictum features: pre/post/session/sandbox contracts, deny/redact/warn/approve effects,
 RBAC, observe mode, and HITL approval.
 

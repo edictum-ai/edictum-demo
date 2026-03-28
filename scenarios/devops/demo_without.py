@@ -168,7 +168,7 @@ def main():
 
     print(f"  Mode: UNGUARDED (no Edictum)")
     print(f"  Model: {MODEL}")
-    print(f"  Contracts: none")
+    print(f"  Rules: none")
     print(f"  Audit: none")
     print(f"  OTel: none")
 

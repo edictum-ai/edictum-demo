@@ -39,7 +39,7 @@ RUN pip install --no-cache-dir \
 
 # Copy demo files (build context = repo root)
 COPY adapters/shared_v2.py /app/adapters/shared_v2.py
-COPY adapters/contracts.yaml /app/adapters/contracts.yaml
+COPY adapters/rules.yaml /app/adapters/rules.yaml
 COPY adapters/demo_claude_agent_sdk.py /app/adapters/demo_claude_agent_sdk.py
 
 WORKDIR /app/adapters

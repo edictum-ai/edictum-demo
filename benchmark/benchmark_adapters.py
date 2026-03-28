@@ -40,7 +40,7 @@ class CollectingSink(AuditSink):
     async def emit(self, event: AuditEvent) -> None:
         self.events.append(event)
 
-CONTRACTS_YAML = """\
+RULES_YAML = """\
 apiVersion: edictum/v1
 kind: ContractBundle
 metadata:
@@ -121,7 +121,7 @@ def fmt(us: float) -> str:
 def make_guard() -> Edictum:
     fd, path = tempfile.mkstemp(suffix=".yaml")
     with os.fdopen(fd, "w") as f:
-        f.write(CONTRACTS_YAML)
+        f.write(RULES_YAML)
     guard = Edictum.from_yaml(path, audit_sink=CollectingSink())
     os.unlink(path)
     return guard

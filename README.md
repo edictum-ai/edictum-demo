@@ -61,7 +61,7 @@ python adversarial/test_adversarial.py --model qwen
 ```bash
 python benchmark/benchmark_adapters.py         # Per-adapter overhead: ~43us across all 8
 python benchmark/benchmark_latency.py          # End-to-end with real LLM calls
-python benchmark/prompt_vs_contracts.py         # Prompt engineering vs contracts
+python benchmark/prompt_vs_rules.py         # Prompt engineering vs contracts
 ```
 
 ### Observability
