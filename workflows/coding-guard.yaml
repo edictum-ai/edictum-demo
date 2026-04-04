@@ -1,0 +1,128 @@
+apiVersion: edictum/v1
+kind: Workflow
+metadata:
+  name: coding-guard
+  version: "2026-04-04"
+  description: Canonical coding workflow for edictum-demo with read, branch, verify, review, docs, PR, and CI stages
+
+stages:
+  - id: read-analyze
+    description: Read the task brief, repo guidance, and relevant code paths before editing
+    tools: [Read, Grep, Glob]
+    exit:
+      - condition: file_read("README.md")
+        message: Read README.md before editing
+
+  - id: create-branch
+    description: Create or switch to a working branch before making changes
+    entry:
+      - condition: stage_complete("read-analyze")
+    tools: [Bash]
+    checks:
+      - command_matches: '(?:^|(?:&&|\|\||;|\n)\s*)git\s+(?:branch|checkout|switch)\b'
+        message: Only branch creation and branch inspection commands are allowed in create-branch
+      - command_not_matches: '(?:^|(?:&&|\|\||;|\n)\s*)git\s+push\b'
+        message: Push is blocked in create-branch
+      - command_not_matches: '(?:^|(?:&&|\|\||;|\n)\s*)git\s+checkout(?:\s+-[bc])?\s+(?:origin/)?(?:main|master)\b'
+        message: Switch to a feature branch, not main or master
+      - command_not_matches: '(?:^|(?:&&|\|\||;|\n)\s*)git\s+switch(?:\s+-[cC])?\s+(?:origin/)?(?:main|master)\b'
+        message: Switch to a feature branch, not main or master
+      - command_not_matches: '(?:^|(?:&&|\|\||;|\n)\s*)git\s+branch\s+(?:--track\s+)?(?:origin/)?(?:main|master)\b'
+        message: Switch to a feature branch, not main or master
+    exit:
+      - condition: 'command_matches("(?:^|(?:&&|\\|\\||;|\\n)\\s*)git\\s+(?:branch|checkout|switch)\\b")'
+        message: Create or switch to a working branch before continuing
+
+  - id: baseline-verify
+    description: Run baseline verification before implementation
+    entry:
+      - condition: stage_complete("create-branch")
+    tools: [Read, Grep, Bash]
+    checks:
+      - command_matches: '(?:^|(?:&&|\|\||;|\n)\s*)(?:(?:python|python3)\s+-m\s+compileall(?:\s|$)|(?:python|python3)\s+-m\s+pytest(?:\s|$)|pytest(?:\s|$))'
+        message: Only baseline verification commands are allowed in baseline-verify
+    exit:
+      - condition: 'command_matches("(?:^|(?:&&|\\|\\||;|\\n)\\s*)(?:(?:python|python3)\\s+-m\\s+compileall(?:\\s|$)|(?:python|python3)\\s+-m\\s+pytest(?:\\s|$)|pytest(?:\\s|$))")'
+        message: Run a baseline verification command successfully before editing
+
+  - id: implement
+    description: Make the requested code changes
+    entry:
+      - condition: stage_complete("baseline-verify")
+    tools: [Read, Grep, Glob, Edit, Write, Bash]
+    checks:
+      - command_not_matches: '(?:^|(?:&&|\|\||;|\n)\s*)(?:(?:python|python3)\s+-m\s+compileall(?:\s|$)|(?:python|python3)\s+-m\s+pytest(?:\s|$)|pytest(?:\s|$))'
+        message: Verification commands belong in local-verify
+      - command_not_matches: '(?:^|(?:&&|\|\||;|\n)\s*)git\s+(?:add|commit|push)\b'
+        message: Save git add, commit, and push for push-pr
+
+  - id: local-verify
+    description: Run local verification after implementation
+    entry:
+      - condition: stage_complete("implement")
+    tools: [Read, Grep, Bash]
+    checks:
+      - command_not_matches: '(?:^|(?:&&|\|\||;|\n)\s*)git\s+(?:status|diff|show|log)\b'
+        message: Review commands belong in external-review
+      - command_not_matches: '(?:^|(?:&&|\|\||;|\n)\s*)git\s+(?:add|commit|push)\b'
+        message: Save git add, commit, and push for push-pr
+      - command_matches: '(?:^|(?:&&|\|\||;|\n)\s*)(?:(?:python|python3)\s+-m\s+compileall(?:\s|$)|(?:python|python3)\s+-m\s+pytest(?:\s|$)|pytest(?:\s|$))'
+        message: Only local verification commands are allowed in local-verify
+    exit:
+      - condition: 'command_matches("(?:^|(?:&&|\\|\\||;|\\n)\\s*)(?:(?:python|python3)\\s+-m\\s+compileall(?:\\s|$)|(?:python|python3)\\s+-m\\s+pytest(?:\\s|$)|pytest(?:\\s|$))")'
+        message: Run a local verification command successfully before review
+
+  - id: external-review
+    description: Review the diff in a separate review lane before pushing
+    entry:
+      - condition: stage_complete("local-verify")
+    tools: [Read, Grep, Bash]
+    checks:
+      - command_matches: '(?:^|(?:&&|\|\||;|\n)\s*)git\s+(?:status|diff|show|log)\b'
+        message: Only review-safe git commands are allowed in external-review
+    exit:
+      - condition: 'command_matches("(?:^|(?:&&|\\|\\||;|\\n)\\s*)git\\s+(?:status|diff|show|log)\\b")'
+        message: Review the diff with git status, diff, show, or log before continuing
+    approval:
+      message: Approve only after external review reports no new issues
+
+  - id: docs-update
+    description: Update docs when the change affects behavior, setup, or workflow guidance
+    entry:
+      - condition: stage_complete("external-review")
+    tools: [Read, Grep, Edit, Write, Bash]
+
+  - id: push-pr
+    description: Stage, commit, push the branch, and open or update the PR
+    entry:
+      - condition: stage_complete("docs-update")
+    tools: [Bash]
+    checks:
+      - command_matches: '(?:^|(?:&&|\|\||;|\n)\s*)(?:git\s+(?:status|diff|add|commit|push)\b|gh\s+pr\s+(?:create|edit|view|status)\b)'
+        message: Only git and gh pr commands are allowed in push-pr
+      - command_not_matches: '(?:^|(?:&&|\|\||;|\n)\s*)git\s+push\b.*(?:\s|:)(?:main|master)(?:\s|$)'
+        message: Push to a feature branch, not main or master
+    exit:
+      - condition: 'command_matches("(?:^|(?:&&|\\|\\||;|\\n)\\s*)git\\s+push\\b")'
+        message: Push the branch before leaving push-pr
+      - condition: 'command_matches("(?:^|(?:&&|\\|\\||;|\\n)\\s*)gh\\s+pr\\s+(?:create|edit)\\b")'
+        message: Create or update the PR before leaving push-pr
+      - condition: 'command_not_matches("(?:^|(?:&&|\\|\\||;|\\n)\\s*)git\\s+push\\b.*(?:\\s|:)(?:main|master)(?:\\s|$)")'
+        message: Push to a feature branch, not main or master
+
+  - id: ci-green
+    description: Check PR and CI status until the required checks are green
+    entry:
+      - condition: stage_complete("push-pr")
+    tools: [Bash]
+    checks:
+      - command_matches: '(?:^|(?:&&|\|\||;|\n)\s*)(?:gh\s+pr\s+checks\b|gh\s+run\s+(?:view|watch|list)\b|gh\s+api\b|curl\b)'
+        message: Only read-only PR and CI status commands are allowed in ci-green
+    exit:
+      - condition: 'command_matches("(?:^|(?:&&|\\|\\||;|\\n)\\s*)(?:gh\\s+pr\\s+checks\\b|gh\\s+run\\s+(?:view|watch)\\b)")'
+        message: Check the PR status and wait for required checks before finishing
+
+  - id: done
+    description: All required workflow stages are complete
+    entry:
+      - condition: stage_complete("ci-green")
