@@ -90,7 +90,7 @@ stages:
     description: Update docs when the change affects behavior, setup, or workflow guidance
     entry:
       - condition: stage_complete("external-review")
-    tools: [Read, Grep, Edit, Write, Bash]
+    tools: [Read, Grep, Edit, Write]
 
   - id: push-pr
     description: Stage, commit, push the branch, and open or update the PR
