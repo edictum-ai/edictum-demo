@@ -35,13 +35,44 @@ REPO_ROOT = Path(__file__).resolve().parents[2]
 HERO_ROOT = Path(__file__).resolve().parent
 WORKFLOW_PATH = REPO_ROOT / "workflows" / "coding-guard.yaml"
 DEFAULT_TASK_PATH = HERO_ROOT / "TASK.md"
-DEFAULT_API_URL = os.environ.get("EDICTUM_URL", "http://127.0.0.1:8080")
+DEFAULT_API_URL = "http://127.0.0.1:8080"
 DEFAULT_ENVIRONMENT = "hero-demo"
 STATE_FILE = ".hero_state.json"
 BASELINE_FILE = ".hero_baseline.json"
+_REPO_ENV_PATH = REPO_ROOT / ".env"
+_REPO_ENV_LOADED = False
 
-if load_dotenv is not None:
-    load_dotenv(REPO_ROOT / ".env")
+
+def _load_env_file(path: Path) -> None:
+    if not path.exists():
+        return
+    for raw_line in path.read_text(encoding="utf-8").splitlines():
+        line = raw_line.strip()
+        if not line or line.startswith("#"):
+            continue
+        if line.startswith("export "):
+            line = line[len("export ") :].lstrip()
+        if "=" not in line:
+            continue
+        key, value = line.split("=", 1)
+        key = key.strip()
+        if not key or key in os.environ:
+            continue
+        value = value.strip()
+        if len(value) >= 2 and value[0] == value[-1] and value[0] in {'"', "'"}:
+            value = value[1:-1]
+        os.environ[key] = value
+
+
+def ensure_repo_env_loaded() -> None:
+    global _REPO_ENV_LOADED
+    if _REPO_ENV_LOADED:
+        return
+    if load_dotenv is not None:
+        load_dotenv(_REPO_ENV_PATH)
+    else:
+        _load_env_file(_REPO_ENV_PATH)
+    _REPO_ENV_LOADED = True
 
 
 JsonDict = dict[str, Any]
@@ -77,6 +108,7 @@ class HeroConfig:
 
     @classmethod
     def from_env(cls, *, api_url: str | None = None, api_key: str | None = None) -> "HeroConfig":
+        ensure_repo_env_loaded()
         effective_key = api_key or os.environ.get("EDICTUM_API_KEY", "")
         if not effective_key:
             raise RuntimeError("EDICTUM_API_KEY is required for the hero demo")

@@ -4,6 +4,8 @@ from pathlib import Path
 
 import pytest
 
+import demos.hero.common as hero_common
+from demos.hero.child import build_tools
 from demos.hero.common import DEFAULT_TASK_PATH, HeroWorkspace, WORKFLOW_PATH
 from edictum import Session, WorkflowRuntime, load_workflow
 from edictum.envelope import create_envelope
@@ -67,3 +69,36 @@ def test_workspace_review_finding_clears_after_second_pass(tmp_path: Path) -> No
         "VERBOSE_FLAG = True\nVERBOSE_FLAG_COMPLETE = True\n",
     )
     assert workspace.current_review_findings() == []
+
+
+def test_hero_config_loads_dotenv_without_python_dotenv(tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> None:
+    env_path = tmp_path / ".env"
+    env_path.write_text(
+        "EDICTUM_URL=http://127.0.0.1:18080\n"
+        "EDICTUM_API_KEY=test-key\n",
+        encoding="utf-8",
+    )
+
+    monkeypatch.delenv("EDICTUM_URL", raising=False)
+    monkeypatch.delenv("EDICTUM_API_KEY", raising=False)
+    monkeypatch.setattr(hero_common, "load_dotenv", None)
+    monkeypatch.setattr(hero_common, "_REPO_ENV_PATH", env_path)
+    monkeypatch.setattr(hero_common, "_REPO_ENV_LOADED", False)
+
+    config = hero_common.HeroConfig.from_env()
+
+    assert config.api_url == "http://127.0.0.1:18080"
+    assert config.api_key == "test-key"
+
+
+@pytest.mark.asyncio
+async def test_build_tools_runs_without_langchain_core(tmp_path: Path) -> None:
+    workspace = HeroWorkspace.initialize(tmp_path, task_text=DEFAULT_TASK_PATH.read_text(encoding="utf-8"))
+
+    tools = build_tools(workspace)
+
+    read_result = await tools["Read"].ainvoke({"path": "README.md"})
+    bash_result = await tools["Bash"].ainvoke({"command": "python -m compileall src"})
+
+    assert "Hero Workspace" in read_result
+    assert "Compiling deterministic hero workspace" in bash_result
