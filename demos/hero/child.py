@@ -66,48 +66,50 @@ class ChildToolDriver:
         )
 
 
-def build_tools(workspace: HeroWorkspace) -> dict[str, Any]:
-    from langchain_core.tools import tool
+class AsyncFunctionTool:
+    """Minimal async tool wrapper for the scripted hero lane."""
 
-    @tool("Read")
+    def __init__(self, func: Any) -> None:
+        self._func = func
+
+    async def ainvoke(self, args: dict[str, Any]) -> Any:
+        return await self._func(**args)
+
+
+def build_tools(workspace: HeroWorkspace) -> dict[str, Any]:
     async def read_file(path: str) -> str:
         """Read a file from the deterministic hero workspace."""
         return workspace.read_text(path)
 
-    @tool("Grep")
     async def grep_files(pattern: str) -> str:
         """Search for a regex pattern across workspace files."""
         return "\n".join(workspace.grep(pattern)) or "No matches"
 
-    @tool("Glob")
     async def glob_files(pattern: str) -> str:
         """Return workspace files that match a glob pattern."""
         return json.dumps(workspace.glob_paths(pattern), sort_keys=True)
 
-    @tool("Write")
     async def write_file(path: str, content: str) -> str:
         """Write a file inside the deterministic hero workspace."""
         workspace.write_text(path, content)
         return f"Wrote {path}"
 
-    @tool("Edit")
     async def edit_file(path: str, old: str, new: str) -> str:
         """Replace one deterministic snippet in a workspace file."""
         workspace.edit_text(path, old, new)
         return f"Edited {path}"
 
-    @tool("Bash")
     async def run_bash(command: str) -> str:
         """Run a deterministic bash simulation against the hero workspace."""
         return workspace.simulate_bash(command)
 
     tools = {
-        "Read": read_file,
-        "Grep": grep_files,
-        "Glob": glob_files,
-        "Write": write_file,
-        "Edit": edit_file,
-        "Bash": run_bash,
+        "Read": AsyncFunctionTool(read_file),
+        "Grep": AsyncFunctionTool(grep_files),
+        "Glob": AsyncFunctionTool(glob_files),
+        "Write": AsyncFunctionTool(write_file),
+        "Edit": AsyncFunctionTool(edit_file),
+        "Bash": AsyncFunctionTool(run_bash),
     }
     return tools
 
