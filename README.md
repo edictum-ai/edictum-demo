@@ -36,6 +36,29 @@ Same governance contracts, 8 different agent frameworks. Proves Edictum is frame
 | Claude Agent SDK | `adapters/demo_claude_agent_sdk.py` | `adapter.to_hook_callables()` |
 | Nanobot | *(on droplet)* | `GovernedToolRegistry` |
 
+### Workflow Gates Hero Demo
+
+`demos/hero/` is the deterministic end-to-end demo path for Workflow Gates:
+parent -> guarded child -> review reset -> approval -> `done`.
+
+Use it when you want to show workflow state, blocked actions, approvals, lineage,
+and repeatability without depending on live LLM behavior.
+
+Start here: `demos/hero/README.md`
+
+### Workflow Gates SDK Demos
+
+Two more deterministic single-agent demos prove the same workflow gates story
+outside Python:
+
+| Demo | Directory | Stack |
+|------|-----------|-------|
+| TypeScript Vercel AI SDK | `demos/ts-vercel-ai/` | `@edictum/vercel-ai` + `@edictum/server` |
+| Go ADK-style adapter | `demos/go-adk/` | `adapter/adkgo` + `server` |
+
+Both run against the same `workflows/coding-guard.yaml` file and end in `done`
+with a blocked action, one approval, and a final workflow snapshot from the API.
+
 ### Hot Reload Test
 
 Validates that contract changes deployed via the console reach connected agents in
@@ -95,6 +118,16 @@ python scenarios/pharma/pharma_agent.py
 python scenarios/fintech/fintech_agent.py
 python scenarios/customer-support/support_agent.py
 
+# Run the deterministic Workflow Gates hero demo
+# See demos/hero/README.md for the required local edictum-api setup first
+.venv/bin/python -m demos.hero.run --summary
+
+# Run the deterministic TypeScript Workflow Gates demo
+cd demos/ts-vercel-ai && pnpm install && pnpm start
+
+# Run the deterministic Go Workflow Gates demo
+cd demos/go-adk && go run .
+
 # Run with a different role (denied access)
 python adapters/demo_langchain.py --role researcher
 
@@ -123,6 +156,9 @@ edictum-demo/
   observability/                # OTel config + Grafana dashboard
   docs/                         # Adapter development insights
   examples/                     # Claude Agent SDK demo
+  demos/hero/                   # Python Workflow Gates hero demo
+  demos/ts-vercel-ai/           # TypeScript Workflow Gates demo
+  demos/go-adk/                 # Go Workflow Gates demo
 ```
 
 ## Env vars

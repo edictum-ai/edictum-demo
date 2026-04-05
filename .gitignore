@@ -9,3 +9,6 @@ __pycache__/
 .ruff_cache/
 messy_files/
 organized/
+demos/ts-vercel-ai/node_modules/
+demos/ts-vercel-ai/dist/
+demos/go-adk/go-adk
