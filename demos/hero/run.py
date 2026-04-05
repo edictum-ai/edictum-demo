@@ -44,6 +44,102 @@ async def _wait_for_process(process: asyncio.subprocess.Process, timeout: float)
         return False
 
 
+def _format_stage_path(run: dict[str, object]) -> str:
+    stages: list[str] = []
+    seen: set[str] = set()
+    raw_history = run.get("stage_history")
+    if isinstance(raw_history, list):
+        for item in raw_history:
+            if not isinstance(item, dict):
+                continue
+            stage = str(item.get("stage", "")).strip()
+            if not stage or stage in seen:
+                continue
+            seen.add(stage)
+            stages.append(stage)
+
+    final_workflow = run.get("final_workflow")
+    if not stages and isinstance(final_workflow, dict):
+        completed = final_workflow.get("completed_stages")
+        if isinstance(completed, list):
+            for item in completed:
+                stage = str(item).strip()
+                if not stage or stage in seen:
+                    continue
+                seen.add(stage)
+                stages.append(stage)
+        active_stage = str(final_workflow.get("active_stage", "")).strip()
+        if active_stage and active_stage not in seen:
+            stages.append(active_stage)
+
+    return " -> ".join(stages)
+
+
+def _format_last_evidence(run: dict[str, object]) -> str:
+    final_workflow = run.get("final_workflow")
+    if not isinstance(final_workflow, dict):
+        return ""
+    evidence = final_workflow.get("last_recorded_evidence")
+    if not isinstance(evidence, dict):
+        return ""
+    tool = str(evidence.get("tool", "")).strip()
+    summary = str(evidence.get("summary", "")).strip()
+    if tool and summary:
+        return f"{tool}: {summary}"
+    return tool or summary
+
+
+def render_summary(summary: dict[str, object]) -> str:
+    runs = summary.get("runs")
+    run_items = runs if isinstance(runs, list) else []
+    completed = int(summary.get("runs_completed", len(run_items)))
+    requested = int(summary.get("runs_requested", completed))
+    status = "PASS" if summary.get("all_succeeded") else "FAIL"
+    lines = [f"Hero demo {status} ({completed}/{requested} runs succeeded)"]
+
+    for index, item in enumerate(run_items, start=1):
+        if not isinstance(item, dict):
+            continue
+        run_index = item.get("run_index", index)
+        child_session_id = str(item.get("child_session_id", "")).strip() or "unknown"
+        final_workflow = item.get("final_workflow")
+        active_stage = ""
+        if isinstance(final_workflow, dict):
+            active_stage = str(final_workflow.get("active_stage", "")).strip()
+
+        lines.append(
+            "run "
+            f"{run_index}: "
+            f"{'ok' if item.get('end_to_end_ok') else 'failed'} "
+            f"session={child_session_id} "
+            f"stage={active_stage or '?'} "
+            f"events={int(item.get('event_count', 0))} "
+            f"approvals={int(item.get('approval_count', 0))} "
+            f"blocked={'yes' if item.get('blocked_event_seen') else 'no'} "
+            f"resets={int(item.get('reset_count', 0))}"
+        )
+
+        stage_path = _format_stage_path(item)
+        if stage_path:
+            lines.append(f"  stages: {stage_path}")
+
+        evidence = _format_last_evidence(item)
+        if evidence:
+            lines.append(f"  last evidence: {evidence}")
+
+        review_outcomes = item.get("review_outcomes")
+        if isinstance(review_outcomes, list) and review_outcomes:
+            actions = [
+                str(outcome.get("action", "")).strip()
+                for outcome in review_outcomes
+                if isinstance(outcome, dict) and str(outcome.get("action", "")).strip()
+            ]
+            if actions:
+                lines.append(f"  review: {', '.join(actions)}")
+
+    return "\n".join(lines)
+
+
 async def run_one(args: argparse.Namespace, *, run_index: int, config: HeroConfig) -> dict[str, object]:
     base_dir = Path(args.base_dir)
     base_dir.mkdir(parents=True, exist_ok=True)
@@ -199,6 +295,16 @@ def parse_args() -> argparse.Namespace:
     )
     parser.add_argument("--keep-run-dirs", action="store_true")
     parser.add_argument("--json", action="store_true", help="print only the final JSON summary")
+    parser.add_argument(
+        "--pretty-json",
+        action="store_true",
+        help="print the full JSON summary with indentation",
+    )
+    parser.add_argument(
+        "--summary",
+        action="store_true",
+        help="print a concise presentation-friendly summary",
+    )
     return parser.parse_args()
 
 
@@ -212,8 +318,10 @@ def main() -> int:
 
     if args.json:
         print_json(summary)
-    else:
+    elif args.pretty_json:
         print(json.dumps(summary, indent=2, sort_keys=True))
+    else:
+        print(render_summary(summary))
     return 0 if summary.get("all_succeeded") else 1
 
 

@@ -7,6 +7,7 @@ import pytest
 import demos.hero.common as hero_common
 from demos.hero.child import build_tools
 from demos.hero.common import DEFAULT_TASK_PATH, HeroWorkspace, WORKFLOW_PATH
+from demos.hero.run import render_summary
 from edictum import Session, WorkflowRuntime, load_workflow
 from edictum.envelope import create_envelope
 from edictum.storage import MemoryBackend
@@ -102,3 +103,48 @@ async def test_build_tools_runs_without_langchain_core(tmp_path: Path) -> None:
 
     assert "Hero Workspace" in read_result
     assert "Compiling deterministic hero workspace" in bash_result
+
+
+def test_render_summary_is_presenter_friendly() -> None:
+    output = render_summary(
+        {
+            "all_succeeded": True,
+            "runs_requested": 1,
+            "runs_completed": 1,
+            "runs": [
+                {
+                    "run_index": 1,
+                    "child_session_id": "hero-child-123",
+                    "end_to_end_ok": True,
+                    "event_count": 77,
+                    "approval_count": 2,
+                    "blocked_event_seen": True,
+                    "reset_count": 1,
+                    "stage_history": [
+                        {"stage": ""},
+                        {"stage": "read-analyze"},
+                        {"stage": "implement"},
+                        {"stage": "done"},
+                    ],
+                    "final_workflow": {
+                        "active_stage": "done",
+                        "completed_stages": ["read-analyze", "implement"],
+                        "last_recorded_evidence": {
+                            "tool": "Bash",
+                            "summary": "gh pr checks --watch",
+                        },
+                    },
+                    "review_outcomes": [
+                        {"action": "requested-reset"},
+                        {"action": "approved-external-review"},
+                    ],
+                }
+            ],
+        }
+    )
+
+    assert "Hero demo PASS (1/1 runs succeeded)" in output
+    assert "run 1: ok session=hero-child-123 stage=done events=77 approvals=2 blocked=yes resets=1" in output
+    assert "stages: read-analyze -> implement -> done" in output
+    assert "last evidence: Bash: gh pr checks --watch" in output
+    assert "review: requested-reset, approved-external-review" in output
