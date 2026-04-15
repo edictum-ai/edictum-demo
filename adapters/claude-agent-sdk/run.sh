@@ -4,7 +4,7 @@
 #   ./adapters/claude-agent-sdk/run.sh              # quick mode
 #   ./adapters/claude-agent-sdk/run.sh --mode observe
 #   ./adapters/claude-agent-sdk/run.sh --role admin
-#   ./adapters/claude-agent-sdk/run.sh --console    # needs console server on localhost:8000
+#   ./adapters/claude-agent-sdk/run.sh --control-plane    # needs control-plane server on localhost:8000
 
 set -euo pipefail
 
@@ -14,9 +14,9 @@ IMAGE="edictum-claude-sdk-demo"
 echo "Building $IMAGE..."
 docker build -f "$REPO_ROOT/adapters/claude-agent-sdk/Dockerfile" -t "$IMAGE" "$REPO_ROOT"
 
-# Use --network host when --console is passed (Docker needs to reach localhost:8000)
+# Use --network host when --control-plane is passed (Docker needs to reach localhost:8000)
 DOCKER_ARGS=()
-if printf '%s\n' "$@" | grep -q -- '--console'; then
+if printf '%s\n' "$@" | grep -Eq -- '--control-plane'; then
     DOCKER_ARGS+=(--network host)
 fi
 

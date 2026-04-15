@@ -96,7 +96,7 @@ TOOLS = [
 
 RULES_YAML = """\
 apiVersion: edictum/v1
-kind: ContractBundle
+kind: Ruleset
 
 metadata:
   name: benchmark-contracts
@@ -108,7 +108,7 @@ defaults:
 observability:
   stdout: false
 
-contracts:
+rules:
   - id: restrict-patient-data
     type: pre
     tool: query_clinical_data
@@ -117,7 +117,7 @@ contracts:
         - args.dataset: { in: [adverse_events_detailed, patient_records] }
         - principal.role: { not_in: [pharmacovigilance, clinical_data_manager] }
     then:
-      effect: deny
+      action: block
       message: "Access to {args.dataset} requires pharmacovigilance role."
       tags: [access-control]
 
@@ -127,7 +127,7 @@ contracts:
     when:
       output.text: { matches: '\\b\\d{3}-\\d{2}-\\d{4}\\b' }
     then:
-      effect: warn
+      action: warn
       message: "Possible SSN detected in output"
       tags: [pii]
 
@@ -136,7 +136,7 @@ contracts:
     limits:
       max_tool_calls: 50
     then:
-      effect: deny
+      action: block
       message: "Session limit exceeded"
 """
 

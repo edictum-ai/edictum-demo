@@ -1,9 +1,9 @@
 # Framework Adapters
 
-Same governance contracts, 8 different agent frameworks. Proves Edictum is framework-agnostic.
+Same governance rules, 8 different agent frameworks. Proves Edictum is framework-agnostic.
 
-All demos use shared mock tools and contracts (`shared_v2.py`, `rules.yaml`) that exercise
-all edictum features: pre/post/session/sandbox contracts, deny/redact/warn/approve effects,
+All demos use shared mock tools and rules (`shared_v2.py`, `rules.yaml`) that exercise
+all edictum features: pre/post/session/sandbox rules, deny/redact/warn/approve actions,
 RBAC, observe mode, and HITL approval.
 
 ## Demos
@@ -22,7 +22,7 @@ RBAC, observe mode, and HITL approval.
 ## Run
 
 ```bash
-# Standalone mode (local YAML contracts)
+# Standalone mode (local YAML rules)
 python adapters/demo_langchain.py
 python adapters/demo_openai_agents.py
 python adapters/demo_agno.py
@@ -37,7 +37,7 @@ python adapters/demo_google_adk.py
 python adapters/demo_langchain.py --role admin     # Change principal role
 python adapters/demo_langchain.py --mode observe   # Log but don't block
 python adapters/demo_langchain.py --quick           # Skip rate limit + approval scenarios
-python adapters/demo_langchain.py --console         # Connect to edictum-console server
+python adapters/demo_langchain.py --control-plane    # Connect to the Edictum control plane
 
 # Google ADK also supports --callbacks for per-agent callback integration
 python adapters/demo_google_adk.py --callbacks
@@ -51,7 +51,7 @@ python adapters/demo_google_adk.py --callbacks
 | Agno | `OPENAI_API_KEY` |
 | Google ADK | `GEMINI_API_KEY` |
 | Claude Agent SDK | `ANTHROPIC_API_KEY` |
-| Console mode (any demo) | `EDICTUM_API_KEY` |
+| Control-plane mode (any demo) | `EDICTUM_API_KEY` |
 
 ### Claude Agent SDK (Docker)
 
@@ -71,7 +71,7 @@ docker run --rm -it -e ANTHROPIC_API_KEY="$ANTHROPIC_API_KEY" edictum-claude-sdk
 
 Every demo exercises the same 17 scenarios covering:
 
-| Contract Type | Scenarios | Expected Outcome |
+| Rule Type | Scenarios | Expected Outcome |
 |---------------|-----------|------------------|
 | Pre (deny) | Sensitive file paths, evil email domains | DENIED |
 | Pre (RBAC) | Delete without admin role | DENIED |
@@ -88,38 +88,38 @@ Every demo exercises the same 17 scenarios covering:
 | **OpenAI Agents SDK** | Output guardrail is side-effect only -- cannot redact PII before the LLM sees it |
 | **CrewAI** | ~3x token usage due to verbose internal prompt construction |
 | **Agno** | No token usage metrics exposed by the framework |
-| **Agno / CrewAI** | Console mode (`--console`) fails due to cross-event-loop bug ([#67](https://github.com/edictum-ai/edictum/issues/67)) -- sync frameworks create their own event loops, breaking the async httpx client from `Edictum.from_server()` |
+| **Agno / CrewAI** | Control-plane mode fails due to cross-event-loop bug ([#67](https://github.com/edictum-ai/edictum/issues/67)) -- sync frameworks create their own event loops, breaking the async httpx client from `Edictum.from_server()` |
 | **Claude Agent SDK** | Must run in Docker container (nested Claude Code session detection) |
 | **Google ADK** | Free tier rate limits vary by model; use `gemini-3.1-flash-lite-preview` |
 
 ## Hot Reload Test
 
-Tests that contract changes deployed via the console propagate to connected agents
+Tests that ruleset changes deployed via the control plane propagate to connected agents
 in real-time via SSE, without restarting the agent. No LLM calls -- uses `guard.run()`
 directly, so it's fast, deterministic, and free.
 
 ```bash
-# Basic (needs console on localhost:8000)
+# Basic (needs the control plane on localhost:8000)
 python adapters/test_hot_reload.py
 
 # More agents, longer timeout
 python adapters/test_hot_reload.py --agents 5 --timeout 30
 ```
 
-Requires `EDICTUM_API_KEY` in `.env` and a running console. Admin credentials default to
+Requires `EDICTUM_API_KEY` in `.env` and a running control plane. Admin credentials default to
 `admin@demo.test` / `edictum2026` (override via `EDICTUM_ADMIN_EMAIL` / `EDICTUM_ADMIN_PASSWORD`).
 
 ### What it validates
 
 | Check | Description |
 |-------|-------------|
-| Baseline governance | V1 contracts deny email to evil.com |
+| Baseline governance | V1 rules deny email to evil.com |
 | SSE reload detected | `policy_version` changes after deploying V2 |
 | Behavior changed | V2 (email rule removed) allows evil email |
 | Second reload | `policy_version` changes again after re-deploying V1 |
 | Behavior restored | V1 denies evil email again -- full round-trip |
 
-The test uploads two contract variants (with/without an email deny rule), deploys them
+The test uploads two ruleset variants (with/without an email deny rule), deploys them
 in sequence, and verifies that multiple connected agents pick up each change via SSE
 hot-reload within the timeout window.
 
@@ -134,14 +134,14 @@ Run all adapters and validate governance results in one command:
 # Full test — all 17 scenarios (rate limit + approval)
 ./adapters/run_all.sh --full
 
-# Console mode — needs edictum-console on localhost:8000
-./adapters/run_all.sh --console
+# Control-plane mode — needs the Edictum control plane on localhost:8000
+./adapters/run_all.sh --control-plane
 
 # Include Claude Agent SDK (Docker required)
 ./adapters/run_all.sh --with-docker
 
 # Everything
-./adapters/run_all.sh --full --with-docker --console
+./adapters/run_all.sh --full --with-docker --control-plane
 ```
 
 ### Testing an edictum feature branch
@@ -151,7 +151,7 @@ Run all adapters and validate governance results in one command:
 cd /path/to/edictum && git checkout my-feature
 cd /path/to/edictum-demo
 ./adapters/run_all.sh --branch                   # standalone
-./adapters/run_all.sh --branch --console          # + console mode
+./adapters/run_all.sh --branch --control-plane     # + control-plane mode
 
 # Restore PyPI version when done
 ./adapters/run_all.sh --reset
@@ -168,19 +168,19 @@ EDICTUM_REPO=/other/path/to/edictum ./adapters/run_all.sh --branch
 | Mode | Checks |
 |------|--------|
 | Standalone | Exact governance counts: 5D 1R 1O 5A (±1 for LLM flakiness) |
-| Console | If #70 (TeeAuditSink) is fixed: validates counts. If not: flags `#70` and skips |
+| Control-plane | If #70 (TeeAuditSink) is fixed: validates counts. If not: flags `#70` and skips |
 | Benchmark | Runs `benchmark_adapters.py`, reports core overhead per tool call |
 
 ### Detecting issue #70
 
-In console mode, the script automatically detects whether `TeeAuditSink` (#70) is
+In control-plane mode, the script automatically detects whether `TeeAuditSink` (#70) is
 implemented. If all results show ALLOWED with 0 denials, it reports:
 
 ```
-  #70  — no local audit in console mode (all results show ALLOWED)
+  #70  — no local audit in control-plane mode (all results show ALLOWED)
          governance runs server-side but classify_result() can't see events
 ```
 
-Once #70 ships, the same script will automatically start validating console results.
+Once #70 ships, the same script will automatically start validating control-plane results.
 
 See `FINDINGS.md` for detailed per-adapter integration notes.
