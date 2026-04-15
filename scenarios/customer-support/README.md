@@ -12,7 +12,7 @@ Demonstrates Edictum governance for a customer support AI agent.
 
 ## Rules
 
-| Contract | Type | What it does |
+| Rule | Type | What it does |
 |----------|------|-------------|
 | `billing-access-control` | pre | Denies `lookup_customer` with billing data unless senior_agent/billing_specialist/supervisor |
 | `refund-limit` | pre | Denies `process_refund` over $500 unless supervisor/billing_specialist |

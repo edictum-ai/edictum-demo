@@ -15,7 +15,7 @@ Same agent. Same tools. Same scenarios. Three deployment stages:
 
   C) PRODUCTION (Edictum Enforce)
      Same clean prompt. Edictum switches to enforce mode — tool calls that violate
-     contracts are deterministically denied. Postcondition-aware redaction prevents
+     rules are deterministically denied. Postcondition-aware redaction prevents
      PII from reaching the LLM.
 
 The benchmark proves: deploy B tomorrow with zero risk. Flip to C when confident.

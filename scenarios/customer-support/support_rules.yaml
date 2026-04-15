@@ -1,5 +1,5 @@
 apiVersion: edictum/v1
-kind: ContractBundle
+kind: Ruleset
 
 metadata:
   name: customer-support-agent
@@ -10,7 +10,7 @@ metadata:
 defaults:
   mode: enforce
 
-contracts:
+rules:
   # --- ACCESS CONTROL --------------------------------------------------
 
   - id: billing-access-control
@@ -21,7 +21,7 @@ contracts:
         - args.include_billing: { equals: true }
         - principal.role: { not_in: [senior_agent, billing_specialist, supervisor] }
     then:
-      effect: deny
+      action: block
       message: "Billing data access requires senior agent or billing specialist role."
       tags: [access-control, billing, pci-dss]
 
@@ -33,7 +33,7 @@ contracts:
         - args.amount: { gt: 500 }
         - principal.role: { not_in: [supervisor, billing_specialist] }
     then:
-      effect: deny
+      action: block
       message: "Refunds over $500 require supervisor approval."
       tags: [access-control, financial, approval-required]
 
@@ -47,7 +47,7 @@ contracts:
         - args.reason: { exists: false }
         - args.reason: { equals: "" }
     then:
-      effect: deny
+      action: block
       message: "Escalation requires a documented reason."
       tags: [process, escalation, documentation]
 
@@ -59,7 +59,7 @@ contracts:
         - args.status: { in: [closed, resolved] }
         - principal.role: { not_in: [senior_agent, supervisor] }
     then:
-      effect: deny
+      action: block
       message: "Only senior agents and supervisors can close tickets."
       tags: [access-control, ticket-lifecycle]
 
@@ -76,7 +76,7 @@ contracts:
           - '\b\d{1,5}\s+[A-Z][a-z]+(?:\s+[A-Z][a-z]+)*\s+(?:St|Ave|Rd|Blvd|Dr|Ln|Ct|Way|Pl)\b'  # Street address
           - '\*{4}\d{4}'                                                      # Partial credit card
     then:
-      effect: warn
+      action: warn
       message: "Potential PII detected in output. Review and redact before use."
       tags: [pii, gdpr, data-minimization]
 
@@ -92,7 +92,7 @@ contracts:
           - '\*{4}\d{4}'                                                      # Partial credit card
           - '\b\d{3}-\d{2}-\d{4}\b'                                          # SSN
     then:
-      effect: warn
+      action: warn
       message: "PII detected in customer lookup output. Minimize data exposure."
       tags: [pii, customer-data]
 
@@ -107,6 +107,6 @@ contracts:
         process_refund: 3
         escalate_ticket: 2
     then:
-      effect: deny
+      action: block
       message: "Session limit reached. Summarize findings and stop."
       tags: [rate-limit, operational-safety]

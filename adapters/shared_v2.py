@@ -3,7 +3,7 @@ Shared utilities for Edictum adapter demos (v2).
 =================================================
 Mock tools, audit helpers, formatting, and CLI parsing used by every adapter demo.
 Covers ALL edictum features: pre/post/session/sandbox, deny/redact/warn/approve,
-principal/RBAC, observe mode, tool classification, and console integration.
+principal/RBAC, observe mode, tool classification, and control-plane integration.
 """
 
 from __future__ import annotations
@@ -105,7 +105,7 @@ def delete_record(record_id: str) -> str:
     return json.dumps({"status": "deleted", "record_id": record_id})
 
 
-# ─── Test scenarios that exercise all contract types ──────────────────────
+# ─── Test scenarios that exercise all rule types ──────────────────────────
 
 SCENARIOS = [
     # (description, tool_name, args_dict, expected_outcome)
@@ -135,7 +135,7 @@ QUICK_SCENARIOS = [s for s in SCENARIOS if s[3] != "approval"][:12]
 # ─── Edictum guard creation helpers ───────────────────────────────────────
 
 def create_standalone_guard(mode: str = "enforce") -> Edictum:
-    """Create a standalone Edictum guard from local YAML contracts."""
+    """Create a standalone Edictum guard from local YAML rules."""
     return Edictum.from_yaml(
         str(RULES_PATH),
         mode=mode if mode != "enforce" else None,
@@ -143,13 +143,16 @@ def create_standalone_guard(mode: str = "enforce") -> Edictum:
     )
 
 
-async def create_console_guard(agent_id: str, bundle_name: str = "edictum-adapter-demos") -> Edictum:
-    """Create an Edictum guard connected to edictum-console."""
+async def create_control_plane_guard(
+    agent_id: str,
+    bundle_name: str = "edictum-adapter-demos",
+) -> Edictum:
+    """Create an Edictum guard connected to the control plane."""
     url = os.environ.get("EDICTUM_URL", "http://localhost:8000")
     api_key = os.environ.get("EDICTUM_API_KEY", "")
     if not api_key:
         raise RuntimeError(
-            "EDICTUM_API_KEY not set. Create an API key in the console dashboard first."
+            "EDICTUM_API_KEY not set. Create an API key in the control plane dashboard first."
         )
     return await Edictum.from_server(
         url=url,
@@ -158,6 +161,9 @@ async def create_console_guard(agent_id: str, bundle_name: str = "edictum-adapte
         bundle_name=bundle_name,
         env="production",
     )
+
+
+create_console_guard = create_control_plane_guard
 
 
 def get_local_sink(guard):
@@ -221,12 +227,17 @@ def classify_result(sink, tool_name: str, expected: str) -> tuple[str, str]:
 
 # ─── Formatting helpers ──────────────────────────────────────────────────
 
-def print_banner(adapter_name: str, mode: str, console: bool = False, otel_mode: str = "disabled"):
+def print_banner(
+    adapter_name: str,
+    mode: str,
+    control_plane: bool = False,
+    otel_mode: str = "disabled",
+):
     print("=" * 70)
     print(f"  EDICTUM {adapter_name.upper()} DEMO")
     print("=" * 70)
     print(f"  Mode:    {mode}")
-    print(f"  Source:  {'edictum-console' if console else 'local YAML'}")
+    print(f"  Source:  {'control plane' if control_plane else 'local YAML'}")
     print(f"  OTel:    {otel_mode}")
     print(f"  Version: {Edictum.__module__.split('.')[0]}")
     print()
@@ -247,7 +258,7 @@ def print_result(action: str, detail: str):
 def print_audit_summary(sink):
     """Print formatted audit summary."""
     if not hasattr(sink, 'events'):
-        print("  (No audit data available — console mode sends events to server)")
+        print("  (No audit data available — control-plane mode sends events to server)")
         return
 
     events = sink.events
@@ -290,8 +301,12 @@ def parse_args(adapter_name: str = "adapter"):
     parser.add_argument("--mode", default="enforce",
                         choices=["enforce", "observe"],
                         help="Governance mode (default: enforce)")
-    parser.add_argument("--console", action="store_true",
-                        help="Use edictum-console instead of local YAML")
+    parser.add_argument(
+        "--control-plane",
+        dest="control_plane",
+        action="store_true",
+        help="Use the Edictum control plane instead of local YAML",
+    )
     parser.add_argument("--otel", default="off",
                         choices=["otlp", "console", "off"],
                         help="OTel export mode (default: off)")
@@ -300,7 +315,8 @@ def parse_args(adapter_name: str = "adapter"):
     parser.add_argument("--role", default="analyst",
                         choices=["analyst", "admin", "viewer"],
                         help="Principal role (default: analyst)")
-    return parser.parse_args()
+    args = parser.parse_args()
+    return args
 
 
 def make_principal(role: str = "analyst") -> Principal:

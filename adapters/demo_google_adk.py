@@ -3,8 +3,8 @@ Edictum Google ADK Adapter Demo
 ================================
 
 Demonstrates Edictum governance using the Google ADK adapter with plugin-based
-integration. Exercises ALL contract types via directed tool calls: pre/post/
-session/sandbox contracts, deny/redact/warn/approve effects, RBAC, and observe mode.
+integration. Exercises ALL rule types via directed tool calls: pre/post/
+session/sandbox rules, deny/redact/warn/approve effects, RBAC, and observe mode.
 
 Two integration paths are shown:
   - **Plugin path** (default): ``adapter.as_plugin()`` for Runner(plugins=[...]).
@@ -15,7 +15,7 @@ Two integration paths are shown:
 Usage:
     python adapters/demo_google_adk.py
     python adapters/demo_google_adk.py --mode observe
-    python adapters/demo_google_adk.py --console
+    python adapters/demo_google_adk.py --control-plane
     python adapters/demo_google_adk.py --quick --role admin
     python adapters/demo_google_adk.py --callbacks   # use agent callback path
 """
@@ -37,7 +37,7 @@ from shared_v2 import (  # noqa: E402
     SCENARIOS,
     QUICK_SCENARIOS,
     create_standalone_guard,
-    create_console_guard,
+    create_control_plane_guard,
     classify_result,
     mark_sink,
     get_local_sink,
@@ -97,7 +97,13 @@ AGENT_INSTRUCTION = (
 
 # ─── Plugin path (recommended) ───────────────────────────────────────────────
 
-async def run_plugin_demo(guard, principal, scenarios, mode: str, console: bool):
+async def run_plugin_demo(
+    guard,
+    principal,
+    scenarios,
+    mode: str,
+    control_plane: bool,
+):
     """Run the demo using the plugin integration path (Runner-level governance)."""
     adapter = GoogleADKAdapter(guard, principal=principal)
     plugin = adapter.as_plugin()
@@ -118,13 +124,19 @@ async def run_plugin_demo(guard, principal, scenarios, mode: str, console: bool)
     )
 
     sink = get_local_sink(guard)
-    print_banner("Google ADK (plugin)", mode, console=console)
+    print_banner("Google ADK (plugin)", mode, control_plane=control_plane)
     await _run_scenarios(runner, session_service, scenarios, sink)
 
 
 # ─── Callback path (alternative) ─────────────────────────────────────────────
 
-async def run_callback_demo(guard, principal, scenarios, mode: str, console: bool):
+async def run_callback_demo(
+    guard,
+    principal,
+    scenarios,
+    mode: str,
+    control_plane: bool,
+):
     """Run the demo using the agent callback integration path (per-agent governance)."""
     adapter = GoogleADKAdapter(guard, principal=principal)
     before_cb, after_cb, _error_cb = adapter.as_agent_callbacks()
@@ -146,7 +158,7 @@ async def run_callback_demo(guard, principal, scenarios, mode: str, console: boo
     )
 
     sink = get_local_sink(guard)
-    print_banner("Google ADK (callbacks)", mode, console=console)
+    print_banner("Google ADK (callbacks)", mode, control_plane=control_plane)
     await _run_scenarios(runner, session_service, scenarios, sink)
 
 
@@ -222,8 +234,10 @@ async def main():
         help="Governance mode (default: enforce)",
     )
     parser.add_argument(
-        "--console", action="store_true",
-        help="Use edictum-console instead of local YAML",
+        "--control-plane",
+        dest="control_plane",
+        action="store_true",
+        help="Use the Edictum control plane instead of local YAML",
     )
     parser.add_argument(
         "--quick", action="store_true",
@@ -243,8 +257,8 @@ async def main():
     scenarios = QUICK_SCENARIOS if args.quick else SCENARIOS
 
     # Create governance guard
-    if args.console:
-        guard = await create_console_guard(
+    if args.control_plane:
+        guard = await create_control_plane_guard(
             agent_id="edictum-adk-agent",
             bundle_name="edictum-adapter-demos",
         )
@@ -253,13 +267,25 @@ async def main():
 
     try:
         if args.callbacks:
-            await run_callback_demo(guard, principal, scenarios, args.mode, args.console)
+            await run_callback_demo(
+                guard,
+                principal,
+                scenarios,
+                args.mode,
+                args.control_plane,
+            )
         else:
-            await run_plugin_demo(guard, principal, scenarios, args.mode, args.console)
+            await run_plugin_demo(
+                guard,
+                principal,
+                scenarios,
+                args.mode,
+                args.control_plane,
+            )
 
         # Audit summary
         sink = get_local_sink(guard)
-        if sink is None and not args.console:
+        if sink is None and not args.control_plane:
             for attr in ("audit_sink", "_sink"):
                 if hasattr(guard, attr):
                     sink = getattr(guard, attr)
@@ -270,10 +296,10 @@ async def main():
             print(f"\n{'=' * 60}")
             print("  GOVERNANCE SUMMARY")
             print(f"{'=' * 60}")
-            print("  (Audit data sent to edictum-console server)")
+            print("  (Audit data sent to the control plane)")
             print()
     finally:
-        if args.console and hasattr(guard, "close"):
+        if args.control_plane and hasattr(guard, "close"):
             await guard.close()
 
 

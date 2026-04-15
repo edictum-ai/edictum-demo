@@ -13,7 +13,7 @@ Demonstrates Edictum governance for a trading desk AI agent.
 
 ## Rules
 
-| Contract | Type | What it does |
+| Rule | Type | What it does |
 |----------|------|--------------|
 | `trade-size-limit` | pre | Denies `execute_trade` when quantity > 1000 without `trade_approval` claim |
 | `account-access-control` | pre | Denies full account data access for non-privileged roles |

@@ -1,7 +1,7 @@
 # Edictum Demo Repository
 
 Full scenario demos, adversarial tests, benchmarks, and observability setup for
-[Edictum](https://github.com/edictum-ai/edictum) -- runtime contracts for AI agents.
+[Edictum](https://github.com/edictum-ai/edictum) -- runtime rules for AI agents.
 
 **Docs:** [docs.edictum.ai](https://docs.edictum.ai)
 **PyPI:** [pypi.org/project/edictum](https://pypi.org/project/edictum/)
@@ -23,7 +23,7 @@ Each scenario includes a governed agent AND an unguarded baseline for comparison
 
 ### Framework Adapters
 
-Same governance contracts, 8 different agent frameworks. Proves Edictum is framework-agnostic.
+Same governance rules, 8 different agent frameworks. Proves Edictum is framework-agnostic.
 
 | Framework | Demo | Adapter API |
 |-----------|------|-------------|
@@ -61,11 +61,11 @@ with a blocked action, one approval, and a final workflow snapshot from the API.
 
 ### Hot Reload Test
 
-Validates that contract changes deployed via the console reach connected agents in
+Validates that ruleset changes deployed via the control plane reach connected agents in
 real-time via SSE -- no agent restart needed. Fast, deterministic, no LLM calls.
 
 ```bash
-python adapters/test_hot_reload.py                   # needs console on localhost:8000
+python adapters/test_hot_reload.py                   # needs the control plane on localhost:8000
 python adapters/test_hot_reload.py --agents 5         # test with more concurrent agents
 ```
 
@@ -84,7 +84,7 @@ python adversarial/test_adversarial.py --model qwen
 ```bash
 python benchmark/benchmark_adapters.py         # Per-adapter overhead: ~43us across all 8
 python benchmark/benchmark_latency.py          # End-to-end with real LLM calls
-python benchmark/prompt_vs_rules.py         # Prompt engineering vs contracts
+python benchmark/prompt_vs_rules.py         # Prompt engineering vs rules
 ```
 
 ### Observability
@@ -107,7 +107,7 @@ Required API keys:
 - `GEMINI_API_KEY` -- for Google ADK demo
 - `ANTHROPIC_API_KEY` -- for Claude Agent SDK demo
 - `OPENROUTER_API_KEY` -- for DeepSeek/Qwen adversarial tests and DevOps demos
-- `EDICTUM_API_KEY` -- for edictum-console connected mode (optional)
+- `EDICTUM_API_KEY` -- for hosted control-plane mode (optional)
 - `OTEL_EXPORTER_OTLP_ENDPOINT` + `OTEL_EXPORTER_OTLP_HEADERS` -- for Grafana Cloud (optional)
 
 ## Quick start
@@ -152,7 +152,7 @@ edictum-demo/
     customer-support/           # Support agent with data minimization
   adapters/                     # 8 framework comparison demos
   adversarial/                  # Multi-model adversarial tests
-  benchmark/                    # Adapter overhead + latency + prompt-vs-contracts
+  benchmark/                    # Adapter overhead + latency + prompt-vs-rules
   observability/                # OTel config + Grafana dashboard
   docs/                         # Adapter development insights
   examples/                     # Claude Agent SDK demo
@@ -169,13 +169,13 @@ edictum-demo/
 | `GEMINI_API_KEY` | Google Gemini API key (Google ADK demo) |
 | `ANTHROPIC_API_KEY` | Anthropic API key (Claude Agent SDK demo) |
 | `OPENROUTER_API_KEY` | OpenRouter API key (DevOps, adversarial tests) |
-| `EDICTUM_API_KEY` | API key for edictum-console connected mode |
-| `EDICTUM_URL` | edictum-console server URL (default: `http://localhost:8000`) |
-| `EDICTUM_ADMIN_EMAIL` | Console admin email for hot reload test (default: `admin@demo.test`) |
-| `EDICTUM_ADMIN_PASSWORD` | Console admin password for hot reload test (default: `edictum2026`) |
+| `EDICTUM_API_KEY` | API key for control-plane connected mode |
+| `EDICTUM_URL` | Control-plane server URL (default: `http://localhost:8000`) |
+| `EDICTUM_ADMIN_EMAIL` | Control-plane admin email for hot reload test (default: `admin@demo.test`) |
+| `EDICTUM_ADMIN_PASSWORD` | Control-plane admin password for hot reload test (default: `edictum2026`) |
 
 > **Warning:** The default admin credentials above are for local demo/testing only. Never use default credentials in production. Always generate strong, unique passwords for any non-local deployment.
 | `EDICTUM_MODEL` | Override LLM model for DevOps/SDK demos |
-| `EDICTUM_OTEL_CONSOLE` | Set to `1` for console OTel output |
+| `EDICTUM_OTEL_CONSOLE` | Set to `1` for terminal OTel output |
 | `OTEL_EXPORTER_OTLP_ENDPOINT` | OTLP endpoint for Grafana Cloud |
 | `OTEL_EXPORTER_OTLP_HEADERS` | URL-encoded auth headers |

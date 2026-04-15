@@ -1,5 +1,5 @@
 apiVersion: edictum/v1
-kind: ContractBundle
+kind: Ruleset
 
 metadata:
   name: fintech-trading-agent
@@ -10,7 +10,7 @@ metadata:
 defaults:
   mode: enforce
 
-contracts:
+rules:
   # ─── TRADE CONTROL ───────────────────────────────────────────────────
 
   - id: trade-size-limit
@@ -21,7 +21,7 @@ contracts:
         - args.quantity: { gt: 1000 }
         - principal.claims.trade_approval: { not_equals: true }
     then:
-      effect: deny
+      action: block
       message: "Trades over 1,000 shares require manager approval."
       tags: [trade-control, risk-management, sox]
 
@@ -35,7 +35,7 @@ contracts:
         - args.dataset: { in: [full_profile, transaction_history, risk_assessment] }
         - principal.role: { not_in: [compliance_officer, senior_trader, risk_manager] }
     then:
-      effect: deny
+      action: block
       message: "Full account access requires compliance officer or senior trader role."
       tags: [access-control, pii, sox]
 
@@ -46,7 +46,7 @@ contracts:
       args.account_id:
         contains_any: [RESTRICTED, FROZEN]
     then:
-      effect: deny
+      action: block
       message: "Access to restricted/frozen accounts is blocked pending investigation."
       tags: [access-control, sec-investigation, aml]
 
@@ -58,7 +58,7 @@ contracts:
     when:
       principal.ticket_ref: { exists: false }
     then:
-      effect: deny
+      action: block
       message: "Compliance reports require an audit ticket reference."
       tags: [change-control, sox, audit-trail]
 
@@ -79,7 +79,7 @@ contracts:
           - '\b[A-Za-z0-9._%+-]+@[A-Za-z0-9.-]+\.[A-Z|a-z]{2,}\b'       # Email
           - '\b(\+1[\s.-]?)?\(?\d{3}\)?[\s.-]?\d{3}[\s.-]?\d{4}\b'       # US phone
     then:
-      effect: warn
+      action: warn
       message: "Potential PII detected in output. Review and redact before use."
       tags: [pii, sox, mifid-ii]
 
@@ -94,7 +94,7 @@ contracts:
           - '\b[A-Za-z0-9._%+-]+@[A-Za-z0-9.-]+\.[A-Z|a-z]{2,}\b'       # Email
           - '\b(\+1[\s.-]?)?\(?\d{3}\)?[\s.-]?\d{3}[\s.-]?\d{4}\b'       # US phone
     then:
-      effect: warn
+      action: warn
       message: "PII detected in compliance report. This document MUST be reviewed before submission."
       tags: [pii, sox, mifid-ii, regulatory-submission]
 
@@ -108,6 +108,6 @@ contracts:
         execute_trade: 5
         generate_compliance_report: 2
     then:
-      effect: deny
+      action: block
       message: "Session limit reached. Summarize findings and stop."
       tags: [rate-limit, operational-safety]

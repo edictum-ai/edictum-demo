@@ -9,7 +9,7 @@
 #  Usage:
 #    ./adapters/run_all.sh                    # standalone, quick (12 scenarios)
 #    ./adapters/run_all.sh --full             # standalone, full (17 scenarios)
-#    ./adapters/run_all.sh --console          # console mode (needs server)
+#    ./adapters/run_all.sh --control-plane    # control-plane mode (needs server)
 #    ./adapters/run_all.sh --with-docker      # include Claude Agent SDK
 #    ./adapters/run_all.sh --branch           # install edictum from local repo
 #    ./adapters/run_all.sh --reset            # reinstall edictum from PyPI
@@ -22,7 +22,7 @@
 #
 #  Prerequisites:
 #    - .env with OPENAI_API_KEY and GEMINI_API_KEY
-#    - --console: edictum-console on localhost:8000 + EDICTUM_API_KEY in .env
+#    - --control-plane: Edictum control plane on localhost:8000 + EDICTUM_API_KEY in .env
 #    - --with-docker: Docker + ANTHROPIC_API_KEY in .env
 #    - --branch: edictum repo at ../edictum (or set EDICTUM_REPO env var)
 #
@@ -44,7 +44,7 @@ RESET=false
 
 for arg in "$@"; do
     case "$arg" in
-        --console)      MODE="--console" ;;
+        --control-plane) MODE="--control-plane" ;;
         --full)         QUICK="" ;;
         --with-docker)  WITH_DOCKER=true ;;
         --branch)       USE_BRANCH=true ;;
@@ -116,7 +116,12 @@ echo ""
 echo "============================================================================"
 echo "  EDICTUM ADAPTER INTEGRATION TESTS"
 echo "============================================================================"
-echo "  Mode:       $([ -z "$MODE" ] && echo "standalone (local YAML)" || echo "console (edictum-console)")"
+if [ -z "$MODE" ]; then
+    MODE_LABEL="standalone (local YAML)"
+else
+    MODE_LABEL="control-plane"
+fi
+echo "  Mode:       $MODE_LABEL"
 echo "  Scenarios:  $([ -n "$QUICK" ] && echo "quick (12)" || echo "full (17)")"
 echo "  Docker:     $([ "$WITH_DOCKER" = true ] && echo "yes" || echo "skip")"
 echo "  Edictum:    $EDICTUM_VERSION ($EDICTUM_SOURCE)"
@@ -241,23 +246,23 @@ validate_adapter() {
             fi
         fi
     else
-        # Console mode: check if #70 (TeeAuditSink) is fixed
+        # Control-plane mode: check if #70 (TeeAuditSink) is fixed
         if [ "$denied" -ge 4 ] && [ "$redacted" -ge 1 ] && [ "$observe" -ge 1 ]; then
-            # Console mode returning real results — #70 is fixed!
-            printf "  ${GREEN}PASS${NC} (console mode with local audit)\n"
+            # Control-plane mode returning real results — #70 is fixed!
+            printf "  ${GREEN}PASS${NC} (control-plane mode with local audit)\n"
             PASS=$((PASS + 1))
-            RESULTS+=("${GREEN}PASS${NC}  $name  (console: ${denied}D ${redacted}R ${observe}O ${allowed}A)")
+            RESULTS+=("${GREEN}PASS${NC}  $name  (control-plane: ${denied}D ${redacted}R ${observe}O ${allowed}A)")
         elif [ "$denied" -eq 0 ] && [ "$allowed" -gt 0 ]; then
             # All ALLOWED = #70 still open (audit events go to server, no local sink)
-            printf "  ${YELLOW}#70${NC}  — no local audit in console mode (all results show ALLOWED)\n"
+            printf "  ${YELLOW}#70${NC}  — no local audit in control-plane mode (all results show ALLOWED)\n"
             printf "        governance runs server-side but classify_result() can't see events\n"
             SKIP=$((SKIP + 1))
-            RESULTS+=("${YELLOW}#70 ${NC}  $name  (console: no local audit — needs TeeAuditSink)")
+            RESULTS+=("${YELLOW}#70 ${NC}  $name  (control-plane: no local audit — needs TeeAuditSink)")
         else
             # Partial results — something else going on
-            printf "  ${YELLOW}CHECK${NC} — partial results, verify in console dashboard\n"
+            printf "  ${YELLOW}CHECK${NC} — partial results, verify in the control-plane dashboard\n"
             SKIP=$((SKIP + 1))
-            RESULTS+=("${YELLOW}CHECK${NC} $name  (console: ${denied}D ${redacted}R ${observe}O ${allowed}A)")
+            RESULTS+=("${YELLOW}CHECK${NC} $name  (control-plane: ${denied}D ${redacted}R ${observe}O ${allowed}A)")
         fi
     fi
 

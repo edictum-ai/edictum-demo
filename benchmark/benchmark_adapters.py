@@ -42,7 +42,7 @@ class CollectingSink(AuditSink):
 
 RULES_YAML = """\
 apiVersion: edictum/v1
-kind: ContractBundle
+kind: Ruleset
 metadata:
   name: benchmark
 defaults:
@@ -54,7 +54,7 @@ tools:
     side_effect: irreversible
   delete_record:
     side_effect: irreversible
-contracts:
+rules:
   - id: block-evil-email
     type: pre
     tool: send_email
@@ -62,7 +62,7 @@ contracts:
       args.to:
         contains_any: ["@evil.com"]
     then:
-      effect: deny
+      action: block
       message: "Blocked"
   - id: pii-detect
     type: post
@@ -71,14 +71,14 @@ contracts:
       output.text:
         matches_any: ['\\b\\d{3}-\\d{2}-\\d{4}\\b']
     then:
-      effect: redact
+      action: redact
       message: "PII redacted"
   - id: rate-limit
     type: session
     limits:
       max_tool_calls: 1000
     then:
-      effect: deny
+      action: block
       message: "Rate limited"
 """
 

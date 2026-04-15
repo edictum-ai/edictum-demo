@@ -31,7 +31,7 @@ Requires `OPENROUTER_API_KEY` in `.env`.
 
 ## Rules
 
-| Contract | Type | What it does |
+| Rule | Type | What it does |
 |----------|------|-------------|
 | `sensitive_reads` | Precondition (built-in) | Blocks reads of `.env`, `.ssh`, k8s secrets |
 | `no_destructive_commands` | Precondition | Blocks `rm`, `rmdir`, `shred` |
