@@ -286,7 +286,7 @@ func (a *heroAgent) emitWorkflowStateUpdated(ctx context.Context, stageID, toSta
 	sessionAttempts := len(a.toolHistory)
 	sessionExecutions := 0
 	for _, item := range a.toolHistory {
-		if denied, _ := item["denied"].(bool); !denied {
+		if blocked, _ := item["blocked"].(bool); !blocked {
 			sessionExecutions++
 		}
 	}
@@ -366,12 +366,12 @@ func (a *heroAgent) invoke(ctx context.Context, toolName string, args map[string
 	return text, false, nil
 }
 
-func (a *heroAgent) appendToolHistory(toolName string, denied bool, text string) {
+func (a *heroAgent) appendToolHistory(toolName string, blocked bool, text string) {
 	a.mu.Lock()
 	defer a.mu.Unlock()
 	a.toolHistory = append(a.toolHistory, map[string]any{
 		"tool_name": toolName,
-		"denied":    denied,
+		"blocked":   blocked,
 		"text":      text,
 	})
 }

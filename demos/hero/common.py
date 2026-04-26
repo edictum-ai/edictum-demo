@@ -123,7 +123,7 @@ class ToolInvocationResult:
     tool_name: str
     args: JsonDict
     text: str
-    denied: bool
+    blocked: bool
 
 
 @dataclass(slots=True)
