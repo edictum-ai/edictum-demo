@@ -33,7 +33,7 @@ export type HeroTsConfig = {
 
 export type ToolInvocationResult = {
   toolName: HeroToolName
-  denied: boolean
+  blocked: boolean
   text: string
 }
 
@@ -157,13 +157,13 @@ export class HeroTsAgent {
     } catch (error) {
       if (error instanceof EdictumDenied) {
         await this.recordStage()
-        const denied = {
+        const blocked = {
           toolName,
-          denied: true,
+          blocked: true,
           text: error.message,
         } satisfies ToolInvocationResult
-        this.toolHistory.push(denied)
-        return denied
+        this.toolHistory.push(blocked)
+        return blocked
       }
       throw error
     }
@@ -192,7 +192,7 @@ export class HeroTsAgent {
     await this.recordStage()
     const result = {
       toolName,
-      denied: false,
+      blocked: false,
       text: stringifyResult(output),
     } satisfies ToolInvocationResult
     this.toolHistory.push(result)
@@ -285,7 +285,7 @@ export class HeroTsAgent {
         postconditionsPassed: true,
         resultSummary: 'workflow set to done',
         sessionAttemptCount: this.callIndex,
-        sessionExecutionCount: this.toolHistory.filter((item) => !item.denied).length,
+        sessionExecutionCount: this.toolHistory.filter((item) => !item.blocked).length,
       }),
     )
     await this.recordStage()

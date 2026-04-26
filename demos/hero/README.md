@@ -1,17 +1,38 @@
-# Hero Demo
+# Workflow Gates Hero Demo
 
-This is the deterministic Workflow Gates demo path for `edictum-demo`.
+This is the primary deterministic demo path for `edictum-demo`.
 
-It shows the thing that matters:
+It shows the agency-control story end to end: an unbounded parent starts a bounded child, and the child must finish a coding task inside a declared Workflow Gates profile.
 
-- an unguarded parent starts a guarded child
-- the child advances through the coding workflow
-- unsafe actions get blocked
-- external review triggers an approval gate
-- the first review resets the workflow back to `implement`
-- the second review approves
-- the run finishes at `done`
-- the API captures workflow state, lineage, approvals, and events
+## Demo narrative
+
+Without Edictum, the agent can jump ahead. With Edictum, the same agent must operate inside its declared profile.
+
+The run demonstrates:
+
+- read-before-write
+- verification-before-push
+- approval-before-critical-transition
+- blocked action
+- recorded evidence
+- final behavioral conformance audit trail
+
+The parent and child are deterministic so the demo proves runtime boundaries without depending on live LLM behavior.
+
+Measurement boundary: this demo shows behavioral conformance to the declared workflow profile. It does not evaluate output quality such as accuracy, relevance, coherence, or answer quality.
+
+## What Happens
+
+The child must:
+
+1. Read the workspace brief before editing.
+2. Create a branch before implementation.
+3. Run baseline verification before code changes.
+4. Attempt an early push during implementation and get blocked.
+5. Run local verification before review and push.
+6. Pass through external review before the critical transition into delivery.
+7. Record evidence for each transition.
+8. Finish at `done` with workflow state, lineage, approvals, events, and final audit data captured by the API.
 
 ## What To Run
 
@@ -61,7 +82,7 @@ uv pip install -e "../edictum[otel,langchain]" \
   pytest-asyncio
 ```
 
-`pytest` and `pytest-asyncio` are included here on purpose. The original P8 verification note missed them.
+`pytest` and `pytest-asyncio` are included here on purpose.
 
 ### 5. Run the unit slice
 
@@ -88,10 +109,11 @@ Hero demo PASS (1/1 runs succeeded)
 run 1: ok session=hero-child-... stage=done events=77 approvals=2 blocked=yes resets=1
   stages: read-analyze -> create-branch -> baseline-verify -> implement -> local-verify -> external-review -> docs-update -> push-pr -> ci-green -> done
   last evidence: Bash: gh pr checks --watch
+  behavioral conformance: read-before-write=yes verification-before-push=yes approval-before-critical-transition=yes blocked-action=yes evidence=recorded audit-trail=complete
   review: requested-reset, approved-external-review
 ```
 
-Use `--json` for machine-readable output. Use `--pretty-json` if you want the full payload in an indented form.
+Use `--json` for machine-readable output. Use `--pretty-json` for the full payload in an indented form.
 
 ### 7. Repeatability check
 

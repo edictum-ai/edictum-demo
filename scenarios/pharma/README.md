@@ -1,25 +1,27 @@
-# Pharmacovigilance Scenario
+# Pharmacovigilance Agent Profile
 
-Clinical trial pharmacovigilance agent governed by Edictum. Uses LangGraph's `create_react_agent` with `ToolNode(wrap_tool_call=adapter.as_tool_wrapper())` for governance integration. Demonstrates HIPAA/PII protection, role-based access, change control, audit trails, and regulatory compliance contracts.
+Declared profile: read/write with sensitive data boundaries.
+
+This profile models a clinical trial pharmacovigilance agent that can inspect cases, update reports, and prepare exports only inside runtime boundaries for patient data, role access, change control, and evidence capture.
 
 ## Files
 
 | File | Description |
 |------|-------------|
-| `pharma_rules.yaml` | YAML contract bundle (`edictum/v1`) |
-| `pharma_agent.py` | CLI agent -- `LangChainAdapter` + `create_react_agent` |
-| `pharma_agent_unguarded.py` | Same agent, no governance (for comparison) |
+| `pharma_rules.yaml` | YAML runtime rules bundle (`edictum/v1`) |
+| `pharma_agent.py` | Edictum-bounded CLI agent using `LangChainAdapter` + `create_react_agent` |
+| `pharma_agent_unguarded.py` | Same agent without Edictum for comparison |
 | `pharma_web_demo.py` | FastAPI + SSE real-time web UI |
 
 ## Run
 
 ```bash
-# CLI -- governed
+# CLI -- with Edictum
 python scenarios/pharma/pharma_agent.py
-python scenarios/pharma/pharma_agent.py --role researcher   # gets denied on patient data
+python scenarios/pharma/pharma_agent.py --role researcher   # blocked on patient data
 python scenarios/pharma/pharma_agent.py --observe            # observe mode
 
-# CLI -- unguarded (shows what happens without governance)
+# CLI -- without Edictum
 python scenarios/pharma/pharma_agent_unguarded.py
 python scenarios/pharma/pharma_agent_unguarded.py --test jailbreak
 
@@ -28,23 +30,23 @@ python scenarios/pharma/pharma_web_demo.py
 # open http://localhost:8787
 ```
 
-## Rules
+## Runtime Rules
 
-| Contract | Type | What it does |
-|----------|------|-------------|
+| Rule | Type | What it does |
+|------|------|-------------|
 | `restrict-patient-data` | pre | Blocks access to detailed patient records without proper role |
 | `no-unblinding` | pre | Prevents unblinding treatment arms |
 | `case-report-requires-ticket` | pre | Requires a tracking ticket for case report modifications |
 | `case-report-authorized-roles` | pre | Only pharmacovigilance and clinical data managers can update reports |
-| `pii-in-any-output` | post | Detects PII (SSN, patient names, email, phone) in all tool output |
+| `pii-in-any-output` | post | Detects PII in all tool output |
 | `regulatory-export-pii` | post | Flags regulatory exports containing PII |
 | `session-limits` | session | Caps tool calls per session |
 
-## What it demonstrates
+## What It Demonstrates
 
-- **Access control**: Researcher role is denied access to detailed adverse event records
-- **Change control**: Case report updates require a CAPA/deviation tracking ticket
-- **PII detection + redaction**: Patient identifiers (SSN, names, email) are detected in tool output and redacted before the LLM sees them
-- **Regulatory compliance**: Exports are scanned for PII before submission
-- **Audit trail**: Every governance decision is logged with full context
-- **Observe mode**: Logs would-deny events without blocking
+- **Sensitive data boundary**: researcher access is blocked for detailed adverse event records
+- **Change control**: case report updates require a CAPA/deviation tracking ticket
+- **PII handling**: patient identifiers are detected and redacted before the LLM sees them
+- **Regulatory export boundary**: exports are scanned before submission
+- **Evidence trail**: every runtime decision is logged with context
+- **Behavioral conformance**: the demo measures whether the agent stays inside the declared profile, not answer quality

@@ -147,4 +147,8 @@ def test_render_summary_is_presenter_friendly() -> None:
     assert "run 1: ok session=hero-child-123 stage=done events=77 approvals=2 blocked=yes resets=1" in output
     assert "stages: read-analyze -> implement -> done" in output
     assert "last evidence: Bash: gh pr checks --watch" in output
+    assert (
+        "behavioral conformance: read-before-write=yes verification-before-push=no "
+        "approval-before-critical-transition=no blocked-action=yes evidence=yes audit-trail=yes"
+    ) in output
     assert "review: requested-reset, approved-external-review" in output

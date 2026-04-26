@@ -89,6 +89,37 @@ def _format_last_evidence(run: dict[str, object]) -> str:
     return tool or summary
 
 
+def _format_behavioral_conformance(run: dict[str, object]) -> str:
+    stage_path = _format_stage_path(run).split(" -> ")
+    stage_index = {stage: index for index, stage in enumerate(stage_path)}
+
+    def ordered(before: str, after: str) -> bool:
+        return before in stage_index and after in stage_index and stage_index[before] < stage_index[after]
+
+    review_outcomes = run.get("review_outcomes")
+    approval_seen = False
+    if isinstance(review_outcomes, list):
+        approval_seen = any(
+            isinstance(outcome, dict) and outcome.get("action") == "approved-external-review"
+            for outcome in review_outcomes
+        )
+
+    final_workflow = run.get("final_workflow")
+    active_stage = ""
+    if isinstance(final_workflow, dict):
+        active_stage = str(final_workflow.get("active_stage", "")).strip()
+
+    checks = {
+        "read-before-write": ordered("read-analyze", "implement"),
+        "verification-before-push": ordered("local-verify", "push-pr"),
+        "approval-before-critical-transition": approval_seen and ordered("external-review", "push-pr"),
+        "blocked-action": bool(run.get("blocked_event_seen")),
+        "evidence": bool(_format_last_evidence(run)),
+        "audit-trail": active_stage == "done" and int(run.get("event_count", 0)) > 0,
+    }
+    return " ".join(f"{name}={'yes' if passed else 'no'}" for name, passed in checks.items())
+
+
 def render_summary(summary: dict[str, object]) -> str:
     runs = summary.get("runs")
     run_items = runs if isinstance(runs, list) else []
@@ -126,6 +157,8 @@ def render_summary(summary: dict[str, object]) -> str:
         evidence = _format_last_evidence(item)
         if evidence:
             lines.append(f"  last evidence: {evidence}")
+
+        lines.append(f"  behavioral conformance: {_format_behavioral_conformance(item)}")
 
         review_outcomes = item.get("review_outcomes")
         if isinstance(review_outcomes, list) and review_outcomes:

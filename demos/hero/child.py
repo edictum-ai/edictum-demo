@@ -62,7 +62,7 @@ class ChildToolDriver:
             tool_name=tool_name,
             args=dict(kwargs),
             text=text,
-            denied=text.startswith("DENIED:"),
+            blocked=text.startswith("DENIED:"),
         )
 
 
@@ -159,12 +159,12 @@ class HeroChild:
             if stage == "done":
                 break
             if stage in {"baseline-verify", "implement"}:
-                denied = await self._implementation_pass()
-                if denied:
+                blocked = await self._implementation_pass()
+                if blocked:
                     continue
             elif stage in {"local-verify", "external-review", "docs-update", "push-pr", "ci-green"}:
-                denied = await self._delivery_pass()
-                if denied:
+                blocked = await self._delivery_pass()
+                if blocked:
                     continue
             else:
                 raise RuntimeError(f"unexpected workflow stage {stage!r}")
@@ -225,7 +225,7 @@ class HeroChild:
             raise RuntimeError("src/hero_cli.py is not in an expected implementation state")
         await self._invoke("Bash", command="git push origin HEAD --dry-run")
         verify = await self._invoke("Bash", command="python -m compileall src")
-        return verify.denied
+        return verify.blocked
 
     async def _delivery_pass(self) -> bool:
         await self._invoke("Bash", command="git status --short")
@@ -239,7 +239,7 @@ class HeroChild:
                 "The CLI now documents a deterministic verbose path for the hero integration test.\n"
             ),
         )
-        if review_gate.denied:
+        if review_gate.blocked:
             return True
         await self._invoke("Bash", command="git add .")
         await self._invoke("Bash", command='git commit -m "feat: add deterministic verbose flag"')
