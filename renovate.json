@@ -1,0 +1,90 @@
+{
+  "$schema": "https://docs.renovatebot.com/renovate-schema.json",
+  "extends": [
+    "config:recommended"
+  ],
+  "enabledManagers": [
+    "npm",
+    "pip_requirements",
+    "gomod",
+    "dockerfile",
+    "docker-compose"
+  ],
+  "minimumReleaseAge": "15 days",
+  "internalChecksFilter": "strict",
+  "prCreation": "not-pending",
+  "timezone": "Europe/Berlin",
+  "schedule": [
+    "after 9am on monday"
+  ],
+  "labels": [
+    "dependencies"
+  ],
+  "dependencyDashboard": true,
+  "osvVulnerabilityAlerts": true,
+  "vulnerabilityAlerts": {
+    "enabled": true,
+    "minimumReleaseAge": "0 days",
+    "schedule": [
+      "at any time"
+    ]
+  },
+  "postUpdateOptions": [
+    "gomodTidy"
+  ],
+  "packageRules": [
+    {
+      "description": "Majors (all managers): 30-day release-age floor, visible and not automerged. Vulnerability fixes bypass the floor (vulnerabilityAlerts).",
+      "matchUpdateTypes": [
+        "major"
+      ],
+      "minimumReleaseAge": "30 days",
+      "automerge": false
+    },
+    {
+      "description": "Npm minor+patch: one weekly PR.",
+      "matchManagers": [
+        "npm"
+      ],
+      "matchUpdateTypes": [
+        "minor",
+        "patch"
+      ],
+      "groupName": "npm minor+patch"
+    },
+    {
+      "description": "Python minor+patch: one weekly PR.",
+      "matchManagers": [
+        "pip_requirements"
+      ],
+      "matchUpdateTypes": [
+        "minor",
+        "patch"
+      ],
+      "groupName": "python minor+patch"
+    },
+    {
+      "description": "Go minor+patch: one weekly PR.",
+      "matchManagers": [
+        "gomod"
+      ],
+      "matchUpdateTypes": [
+        "minor",
+        "patch"
+      ],
+      "groupName": "go minor+patch"
+    },
+    {
+      "description": "Docker images minor+patch: one weekly PR.",
+      "matchManagers": [
+        "dockerfile",
+        "docker-compose"
+      ],
+      "matchUpdateTypes": [
+        "minor",
+        "patch"
+      ],
+      "groupName": "docker images minor+patch"
+    }
+  ]
+}
