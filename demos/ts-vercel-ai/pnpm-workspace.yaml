@@ -4,3 +4,6 @@
 # An advisory fix younger than 15 days goes in minimumReleaseAgeExclude,
 # with its GHSA id and minimum fixing version in a comment.
 minimumReleaseAge: 21600
+minimumReleaseAgeExclude:
+  # Renovate security update: zod@4.6.6
+  - zod@4.6.6
