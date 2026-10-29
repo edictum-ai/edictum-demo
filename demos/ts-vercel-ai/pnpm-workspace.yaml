@@ -1,0 +1,6 @@
+# Dependency cooldown: pnpm only resolves versions published at least
+# 15 days ago (21600 minutes). This matches Renovate's minimumReleaseAge
+# in renovate.json. Needs pnpm 10.16 or later (see packageManager).
+# An advisory fix younger than 15 days goes in minimumReleaseAgeExclude,
+# with its GHSA id and minimum fixing version in a comment.
+minimumReleaseAge: 21600
