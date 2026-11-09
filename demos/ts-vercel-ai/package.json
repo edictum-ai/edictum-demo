@@ -15,7 +15,7 @@
     "@edictum/core": "0.4.0",
     "@edictum/server": "0.4.0",
     "@edictum/vercel-ai": "0.3.0",
-    "ai": "^5.0.0",
+    "ai": "^7.0.0",
     "dotenv": "^16.4.7",
     "zod": "^3.24.2"
   },
