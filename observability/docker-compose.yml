@@ -11,7 +11,7 @@ services:
       - tempo
 
   tempo:
-    image: grafana/tempo:2.7.1
+    image: grafana/tempo:3.1.0
     ports:
       - "3200:3200"   # Tempo API
       - "4320:4317"   # Internal OTLP gRPC (different host port to avoid conflict)
