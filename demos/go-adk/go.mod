@@ -2,7 +2,7 @@ module github.com/edictum-ai/edictum-demo/demos/go-adk
 
 go 1.25.0
 
-require github.com/edictum-ai/edictum-go v0.4.0
+require github.com/edictum-ai/edictum-go v0.6.0
 
 require (
 	github.com/cespare/xxhash/v2 v2.3.0 // indirect
