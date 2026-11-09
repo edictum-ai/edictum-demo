@@ -11,7 +11,7 @@
     "build": "tsc -p tsconfig.json"
   },
   "dependencies": {
-    "@ai-sdk/openai": "^1.0.0",
+    "@ai-sdk/openai": "^4.0.0",
     "@edictum/core": "0.4.0",
     "@edictum/server": "0.4.0",
     "@edictum/vercel-ai": "0.3.0",
