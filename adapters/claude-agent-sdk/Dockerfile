@@ -15,7 +15,7 @@
 #     -e ANTHROPIC_API_KEY="$ANTHROPIC_API_KEY" \
 #     edictum-claude-sdk-demo --mode observe --quick
 
-FROM node:22-slim
+FROM node:26-slim
 
 # Install Python 3.12+ and pip
 RUN apt-get update && \
