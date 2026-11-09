@@ -1,6 +1,6 @@
 services:
   otel-collector:
-    image: otel/opentelemetry-collector-contrib:0.115.0
+    image: otel/opentelemetry-collector-contrib:0.163.2
     ports:
       - "4317:4317"   # gRPC OTLP
       - "4318:4318"   # HTTP OTLP
@@ -11,7 +11,7 @@ services:
       - tempo
 
   tempo:
-    image: grafana/tempo:2.7.1
+    image: grafana/tempo:2.10.10
     ports:
       - "3200:3200"   # Tempo API
       - "4320:4317"   # Internal OTLP gRPC (different host port to avoid conflict)
@@ -20,7 +20,7 @@ services:
     command: -config.file=/etc/tempo/config.yaml
 
   prometheus:
-    image: prom/prometheus:v3.1.0
+    image: prom/prometheus:v3.15.1
     ports:
       - "9090:9090"
     volumes:
@@ -30,7 +30,7 @@ services:
       - --web.enable-remote-write-receiver
 
   grafana:
-    image: grafana/grafana:11.4.0
+    image: grafana/grafana:11.6.16
     ports:
       - "3000:3000"
     environment:
